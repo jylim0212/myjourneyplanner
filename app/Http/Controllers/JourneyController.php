@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Journey;
+use App\Models\JourneyLocation;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class JourneyController extends Controller
 {
@@ -26,23 +28,33 @@ class JourneyController extends Controller
     {
         $request->validate([
             'journey_name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'preferred_events' => 'nullable|string|max:255',
+            'preferred_events' => 'nullable|string',
+            'locations' => 'required|array|min:1', // Ensure at least one location
+            'locations.*' => 'required|string|max:255' // Validate each location
         ]);
 
-        Journey::create([
-            'user_id' => Auth::id(),
+        // Create the journey
+        $journey = Journey::create([
+            'user_id' => auth()->id(),
             'journey_name' => $request->journey_name,
-            'location' => $request->location,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'preferred_events' => $request->preferred_events,
         ]);
 
+        // Store locations
+        foreach ($request->locations as $location) {
+            JourneyLocation::create([
+                'journey_id' => $journey->id,
+                'location' => $location,
+            ]);
+        }
+
         return redirect()->route('journey.index')->with('success', 'Journey created successfully!');
     }
+
 
     // Show the edit form for a specific journey
     public function edit($id)
@@ -52,29 +64,61 @@ class JourneyController extends Controller
     }
 
     // Update the journey details
-    public function update(Request $request, $id)
+    public function update(Request $request, $id)  // Use explicit $id instead of Journey model binding
     {
         $request->validate([
             'journey_name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'preferred_events' => 'nullable|string|max:255',
+            'preferred_events' => 'nullable|string',
+            'locations' => 'required|array|min:1',
+            'locations.*' => 'required|string|max:255'
         ]);
 
-        $journey = Journey::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
-        $journey->update($request->all());
+        DB::beginTransaction();
 
-        return redirect()->route('journey.index')->with('success', 'Journey updated successfully!');
+        try {
+            // Explicitly find journey
+            $journey = Journey::findOrFail($id);
+
+            // Update the journey details
+            $journey->update([
+                'journey_name' => $request->journey_name,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'preferred_events' => $request->preferred_events,
+            ]);
+
+            // Delete old locations
+            JourneyLocation::where('journey_id', $journey->id)->delete();
+
+            // Insert new locations
+            foreach ($request->locations as $location) {
+                JourneyLocation::create([
+                    'journey_id' => $journey->id, 
+                    'location' => $location
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('journey.index')->with('success', 'Journey updated successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors('Error updating journey: ' . $e->getMessage());
+        }
     }
 
-    public function destroy($id)
+
+    public function destroy(Journey $journey)
     {
-        $journey = Journey::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
+        if ($journey->user_id !== Auth::id()) {
+            return redirect()->route('journey.index')->with('error', 'Unauthorized action.');
+        }
+
         $journey->delete();
-
-        return redirect()->route('journey.index')->with('success', 'Journey deleted successfully!');
+        return redirect()->route('journey.index')->with('success', 'Journey deleted successfully.');
     }
-
 }
 

@@ -30,7 +30,11 @@
                 @foreach($journeys as $journey)
                     <tr>
                         <td>{{ $journey->journey_name }}</td>
-                        <td>{{ $journey->location }}</td>
+                        <td>
+                            @foreach($journey->locations as $location)
+                                <span class="badge bg-primary">{{ $location->location }}</span>
+                            @endforeach
+                        </td>
                         <td>{{ $journey->start_date }}</td>
                         <td>{{ $journey->end_date }}</td>
                         <td>{{ $journey->preferred_events ?? 'N/A' }}</td>
@@ -45,6 +49,7 @@
                     </tr>
                 @endforeach
             </tbody>
+
         </table>
     @endif
 </div>

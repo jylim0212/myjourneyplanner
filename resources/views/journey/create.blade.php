@@ -19,37 +19,31 @@
 
         <div class="form-group">
             <label for="journey_name">Journey Name</label>
-            <input id="journey_name" type="text" class="form-control @error('journey_name') is-invalid @enderror" name="journey_name" value="{{ old('journey_name') }}" required>
-            @error('journey_name')
-                <small class="text-danger">{{ $message }}</small>
-            @enderror
+            <input id="journey_name" type="text" class="form-control" name="journey_name" required>
         </div>
 
         <div class="form-group">
-            <label for="location">Location</label>
-            <input id="location" type="text" class="form-control @error('location') is-invalid @enderror" name="location" value="{{ old('location') }}" required>
-            @error('location')
-                <small class="text-danger">{{ $message }}</small>
-            @enderror
+            <label>Locations</label>
+            <div id="location-fields">
+                <div class="input-group mb-2">
+                    <input type="text" name="locations[]" class="form-control" required>
+                    <button type="button" class="btn btn-danger remove-location d-none">Remove</button>
+                </div>
+            </div>
+            <button type="button" id="add-location" class="btn btn-secondary mt-2">+ Add Location</button>
         </div>
 
         <div class="form-group">
             <label>Start Date & End Date</label>
             <div class="d-flex">
-                <input id="start_date" type="date" class="form-control @error('start_date') is-invalid @enderror me-2" name="start_date" value="{{ old('start_date') }}" required>
-                <input id="end_date" type="date" class="form-control @error('end_date') is-invalid @enderror" name="end_date" value="{{ old('end_date') }}" required>
+                <input id="start_date" type="date" class="form-control me-2" name="start_date" required>
+                <input id="end_date" type="date" class="form-control" name="end_date" required>
             </div>
-            @error('start_date')
-                <small class="text-danger">{{ $message }}</small>
-            @enderror
-            @error('end_date')
-                <small class="text-danger">{{ $message }}</small>
-            @enderror
         </div>
 
         <div class="form-group">
             <label for="preferred_events">Preferred Events (Optional)</label>
-            <input id="preferred_events" type="text" class="form-control" name="preferred_events" value="{{ old('preferred_events') }}">
+            <input id="preferred_events" type="text" class="form-control" name="preferred_events">
         </div>
 
         <div class="form-group text-center mt-3">
@@ -57,4 +51,28 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('add-location').addEventListener('click', function() {
+        let div = document.createElement('div');
+        div.classList.add('input-group', 'mb-2');
+
+        div.innerHTML = `
+            <input type="text" name="locations[]" class="form-control" required>
+            <button type="button" class="btn btn-danger remove-location">Remove</button>
+        `;
+
+        document.getElementById('location-fields').appendChild(div);
+    });
+
+    // Event delegation to handle dynamically added remove buttons
+    document.getElementById('location-fields').addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-location')) {
+            event.target.parentElement.remove();
+        }
+    });
+});
+</script>
+
 @endsection

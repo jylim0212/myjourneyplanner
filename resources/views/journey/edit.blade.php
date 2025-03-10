@@ -26,11 +26,17 @@
         </div>
 
         <div class="form-group">
-            <label for="location">Location</label>
-            <input id="location" type="text" class="form-control @error('location') is-invalid @enderror" name="location" value="{{ old('location', $journey->location) }}" required>
-            @error('location')
-                <small class="text-danger">{{ $message }}</small>
-            @enderror
+            <label>Locations</label>
+            <div id="location-fields">
+                @foreach($journey->locations as $location)
+                    <div class="input-group mb-2 location-group">
+                        <input type="text" name="locations[]" class="form-control" value="{{ $location->location }}" required>
+                        <button type="button" class="btn btn-danger remove-location" data-id="{{ $location->id }}">Remove</button>
+                    </div>
+                @endforeach
+            </div>
+            <input type="hidden" name="removed_locations" id="removed_locations">
+            <button type="button" id="add-location" class="btn btn-secondary mt-2">+ Add Location</button>
         </div>
 
         <div class="form-group">
@@ -57,4 +63,32 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let removedLocations = [];
+
+    document.getElementById('add-location').addEventListener('click', function() {
+        let div = document.createElement('div');
+        div.classList.add('input-group', 'mb-2', 'location-group');
+        div.innerHTML = `
+            <input type="text" name="locations[]" class="form-control" required>
+            <button type="button" class="btn btn-danger remove-location">Remove</button>
+        `;
+        document.getElementById('location-fields').appendChild(div);
+    });
+
+    document.getElementById('location-fields').addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-location')) {
+            let locationId = event.target.getAttribute('data-id');
+            if (locationId) {
+                removedLocations.push(locationId);
+                document.getElementById('removed_locations').value = removedLocations.join(',');
+            }
+            event.target.parentElement.remove();
+        }
+    });
+});
+</script>
+
 @endsection

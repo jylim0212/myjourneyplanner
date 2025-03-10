@@ -10,16 +10,20 @@ class Journey extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'journey_name',
-        'location',
-        'start_date',
-        'end_date',
-        'preferred_events',
+        'user_id', 
+        'journey_name', 
+        'start_date', 
+        'end_date', 
+        'preferred_events'
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(JourneyLocation::class);
     }
 }

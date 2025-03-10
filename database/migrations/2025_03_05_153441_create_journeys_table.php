@@ -11,7 +11,6 @@ return new class extends Migration {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('journey_name');
-            $table->string('location');
             $table->date('start_date');
             $table->date('end_date');
             $table->string('preferred_events')->nullable();
