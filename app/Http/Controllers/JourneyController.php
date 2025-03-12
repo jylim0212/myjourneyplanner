@@ -113,12 +113,16 @@ class JourneyController extends Controller
 
     public function destroy(Journey $journey)
     {
-        if ($journey->user_id !== Auth::id()) {
+        if ($journey->user_id != Auth::id()) {
             return redirect()->route('journey.index')->with('error', 'Unauthorized action.');
         }
 
-        $journey->delete();
-        return redirect()->route('journey.index')->with('success', 'Journey deleted successfully.');
+        try {
+            $journey->delete();
+            return redirect()->route('journey.index')->with('success', 'Journey deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete the journey. Please try again.');
+        }
     }
 }
 

@@ -10,7 +10,27 @@
                 <div class="card-body">
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
+                        @if ($errors->any())
+                            <div class="alert alert-danger">
+                                <ul>
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
 
+                        @if (session('error'))
+                            <div class="alert alert-danger">
+                                {{ session('error') }}
+                            </div>
+                        @endif
+
+                        @if (session('success'))
+                            <div class="alert alert-success">
+                                {{ session('success') }}
+                            </div>
+                        @endif
                         <div class="form-group">
                             <label for="email">Email Address</label>
                             <input id="email" type="email" class="form-control" name="email" required autofocus>

@@ -40,10 +40,10 @@
                         <td>{{ $journey->preferred_events ?? 'N/A' }}</td>
                         <td>
                             <a href="{{ route('journey.edit', $journey->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                            <form action="{{ route('journey.destroy', $journey->id) }}" method="POST" style="display:inline;" onsubmit="return confirmDelete()">
+                            <form action="{{ route('journey.destroy', $journey->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this journey?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                <button type="submit" class="btn btn-danger">Delete</button>
                             </form>
                         </td>
                     </tr>
