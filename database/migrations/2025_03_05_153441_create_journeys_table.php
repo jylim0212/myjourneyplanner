@@ -9,15 +9,14 @@ return new class extends Migration {
     {
         Schema::create('journeys', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->foreignId('user_id')
+                  ->constrained()
+                  ->onDelete('cascade'); // Ensure user's journeys are deleted when user is deleted
             $table->string('journey_name');
             $table->date('start_date');
             $table->date('end_date');
-            $table->string('preferred_events')->nullable();
+            $table->text('preferred_events')->nullable();
             $table->timestamps();
-
-            // Foreign key constraint
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

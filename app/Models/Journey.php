@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Journey extends Model
 {
@@ -22,8 +23,15 @@ class Journey extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function locations()
+    public function locations(): HasMany
     {
-        return $this->hasMany(JourneyLocation::class);
+        return $this->hasMany(JourneyLocation::class, 'journey_id');
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($journey) {
+            $journey->locations()->delete(); // Delete locations before deleting the journey
+        });
     }
 }
