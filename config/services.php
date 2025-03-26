@@ -53,4 +53,10 @@ return [
         'base_url' => 'https://api.openweathermap.org/data/2.5',
     ],
 
+    'gpt' => [
+        'api_key' => env('GPT_API_KEY'),
+        'api_host' => env('GPT_API_HOST', 'chatgpt-42.p.rapidapi.com'),
+        'api_url' => env('GPT_API_URL', 'https://chatgpt-42.p.rapidapi.com/gpt4'),
+    ],
+
 ];

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\JourneyController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\RecommendationsController;
 
 // Root route - redirect to login if not authenticated, otherwise to appropriate dashboard
 Route::get('/', function () {
@@ -21,10 +22,9 @@ Route::middleware(['auth', 'user.only'])->group(function () {
     Route::get('/journey/edit/{id}', [JourneyController::class, 'edit'])->name('journey.edit');
     Route::post('/journey/update/{id}', [JourneyController::class, 'update'])->name('journey.update');
     Route::delete('/journey/delete/{journey}', [JourneyController::class, 'destroy'])->name('journey.destroy');
-    Route::get('/recommendation', function () {
-        return view('recommendation.index');
-    })->name('recommendation.index');
+    Route::get('/recommendations', [RecommendationsController::class, 'index'])->name('recommendations.index');
     Route::get('/journeys/{journey}', [JourneyController::class, 'show'])->name('journey.show');
+    Route::post('/journeys/{journey}/analyze', [JourneyController::class, 'analyze'])->name('journey.analyze');
 });
 
 Auth::routes();

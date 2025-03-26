@@ -8,14 +8,18 @@ use App\Models\JourneyLocation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Services\WeatherService;
+use App\Services\GptService;
+use App\Models\Recommendation;
 
 class JourneyController extends Controller
 {
     protected $weatherService;
+    protected $gptService;
 
-    public function __construct(WeatherService $weatherService)
+    public function __construct(WeatherService $weatherService, GptService $gptService)
     {
         $this->weatherService = $weatherService;
+        $this->gptService = $gptService;
     }
 
     // Show the list of journeys for the logged-in user
@@ -145,6 +149,48 @@ class JourneyController extends Controller
         }
 
         return view('journey.show', compact('journey', 'weatherData'));
+    }
+
+    public function analyze(Request $request, Journey $journey)
+    {
+        try {
+            $currentLocation = $request->input('current_location');
+            
+            if (!$currentLocation) {
+                return response()->json([
+                    'error' => 'Current location is required'
+                ], 400);
+            }
+
+            $gptService = new GptService();
+            $response = $gptService->analyzeJourney($journey, $currentLocation);
+            
+            // Log the response for debugging
+            \Log::info('GPT Analysis Response:', $response);
+            
+            // Format the recommendation
+            $recommendationText = $response['result'] ?? json_encode($response);
+            
+            // Create recommendation record
+            $recommendation = new Recommendation([
+                'journey_id' => $journey->id,
+                'current_location' => $currentLocation,
+                'recommendation' => $recommendationText,
+                'generated_at' => now()
+            ]);
+            $recommendation->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Journey analyzed successfully',
+                'recommendation' => $recommendation
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Journey Analysis Error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Error analyzing journey: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
 

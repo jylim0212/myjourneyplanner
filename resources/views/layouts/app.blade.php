@@ -11,6 +11,7 @@
 
     <!-- Scripts -->
     <script src="{{ asset('js/app.js') }}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.gstatic.com">
@@ -138,7 +139,7 @@
         <div id="sidebar">
             <a href="javascript:void(0)" onclick="toggleSidebar()" style="text-align: right; padding-right: 15px;">&times;</a>
             <a href="{{ route('journey.index') }}" onclick="closeSidebar()">🏠 Home</a>
-            <a href="{{ route('recommendation.index') }}" onclick="closeSidebar()">🤖 AI Recommendation</a>
+            <a href="{{ route('recommendations.index') }}" onclick="closeSidebar()">🤖 AI Recommendation</a>
         </div>
 
 

@@ -60,6 +60,11 @@
                                                class="btn btn-sm btn-primary">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-success"
+                                                    onclick="showAnalyzeModal({{ $journey->id }})">
+                                                <i class="fas fa-robot"></i> Analyze
+                                            </button>
                                             <form action="{{ route('journey.destroy', $journey) }}" 
                                                   method="POST" 
                                                   class="d-inline"
@@ -79,6 +84,32 @@
                     </table>
                 </div>
             @endif
+        </div>
+    </div>
+</div>
+
+<!-- Analyze Modal -->
+<div class="modal fade" id="analyzeModal" tabindex="-1" aria-labelledby="analyzeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="analyzeModalLabel">Analyze Journey</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="analyzeForm">
+                    @csrf
+                    <input type="hidden" id="journeyId" name="journey_id">
+                    <div class="mb-3">
+                        <label for="currentLocation" class="form-label">Where are you currently?</label>
+                        <input type="text" class="form-control" id="currentLocation" name="current_location" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="analyzeSubmit">Analyze</button>
+            </div>
         </div>
     </div>
 </div>
@@ -135,4 +166,75 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 @endif
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap modal
+    const analyzeModal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+
+    // Function to show the analyze modal
+    window.showAnalyzeModal = function(journeyId) {
+        console.log('Showing modal for journey:', journeyId); // Debug log
+        // Store the journey ID in the hidden input
+        document.getElementById('journeyId').value = journeyId;
+        
+        // Show the modal
+        analyzeModal.show();
+    };
+
+    // Add event listener for the analyze submit button
+    const analyzeSubmitBtn = document.getElementById('analyzeSubmit');
+    if (analyzeSubmitBtn) {
+        analyzeSubmitBtn.addEventListener('click', function() {
+            console.log('Submit button clicked'); // Debug log
+            const journeyId = document.getElementById('journeyId').value;
+            const currentLocation = document.getElementById('currentLocation').value;
+
+            if (!currentLocation) {
+                alert('Please enter your current location');
+                return;
+            }
+
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+
+            // Make the API call
+            fetch(`/journeys/${journeyId}/analyze`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    current_location: currentLocation
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Show success message and redirect
+                alert('Analysis completed successfully!');
+                window.location.href = '{{ route("recommendations.index") }}';
+            })
+            .catch(error => {
+                alert('Error analyzing journey: ' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
+                this.disabled = false;
+                this.innerHTML = 'Analyze';
+                
+                // Hide the modal
+                analyzeModal.hide();
+            });
+        });
+    } else {
+        console.error('Analyze submit button not found'); // Debug log
+    }
+});
+</script>
 @endsection
