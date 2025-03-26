@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
     ];
 
     /**
@@ -40,5 +41,37 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_admin' => 'boolean',
     ];
+
+    /**
+     * Get all journeys for the user.
+     */
+    public function journeys()
+    {
+        return $this->hasMany(Journey::class);
+    }
+
+    /**
+     * Check if the user is an admin.
+     */
+    public function isAdmin()
+    {
+        return $this->is_admin;
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted()
+    {
+        static::deleting(function ($user) {
+            // Delete all journey locations for the user's journeys
+            $journeyIds = $user->journeys()->pluck('id');
+            JourneyLocation::whereIn('journey_id', $journeyIds)->delete();
+            
+            // Delete all journeys (this will cascade delete journey locations)
+            $user->journeys()->delete();
+        });
+    }
 }

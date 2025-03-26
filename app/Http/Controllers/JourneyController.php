@@ -7,9 +7,17 @@ use App\Models\Journey;
 use App\Models\JourneyLocation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\WeatherService;
 
 class JourneyController extends Controller
 {
+    protected $weatherService;
+
+    public function __construct(WeatherService $weatherService)
+    {
+        $this->weatherService = $weatherService;
+    }
+
     // Show the list of journeys for the logged-in user
     public function index()
     {
@@ -123,6 +131,20 @@ class JourneyController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to delete the journey. Please try again.');
         }
+    }
+
+    public function show(Journey $journey)
+    {
+        $weatherData = [];
+        foreach ($journey->locations as $location) {
+            $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
+                $location->location,
+                $journey->start_date,
+                $journey->end_date
+            );
+        }
+
+        return view('journey.show', compact('journey', 'weatherData'));
     }
 }
 
