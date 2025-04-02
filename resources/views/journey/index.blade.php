@@ -52,7 +52,7 @@
                                     <td>{{ $journey->end_date }}</td>
                                     <td>
                                         <div class="btn-group">
-                                            <a href="{{ route('journey.show', $journey) }}" 
+                                            <a href="{{ route('journey.show', ['journey' => $journey, 'show_weather' => true]) }}" 
                                                class="btn btn-sm btn-info">
                                                 <i class="fas fa-cloud-sun"></i> Weather
                                             </a>
@@ -103,6 +103,11 @@
                     <div class="mb-3">
                         <label for="currentLocation" class="form-label">Where are you currently?</label>
                         <input type="text" class="form-control" id="currentLocation" name="current_location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customQuestion" class="form-label">Custom Analysis Question (Optional)</label>
+                        <textarea class="form-control" id="customQuestion" name="custom_question" rows="3" placeholder="Leave empty to use the default question"></textarea>
+                        <div class="form-text">If left empty, the system will use the default analysis question.</div>
                     </div>
                 </form>
             </div>
@@ -189,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Submit button clicked'); // Debug log
             const journeyId = document.getElementById('journeyId').value;
             const currentLocation = document.getElementById('currentLocation').value;
+            const customQuestion = document.getElementById('customQuestion').value;
 
             if (!currentLocation) {
                 alert('Please enter your current location');
@@ -207,7 +213,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
                 body: JSON.stringify({
-                    current_location: currentLocation
+                    current_location: currentLocation,
+                    custom_question: customQuestion
                 })
             })
             .then(response => response.json())

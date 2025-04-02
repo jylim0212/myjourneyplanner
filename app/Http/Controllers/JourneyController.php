@@ -139,22 +139,54 @@ class JourneyController extends Controller
 
     public function show(Journey $journey)
     {
+        if ($journey->user_id != Auth::id()) {
+            return redirect()->route('journey.index')->with('error', 'Unauthorized action.');
+        }
+
         $weatherData = [];
-        foreach ($journey->locations as $location) {
-            $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
-                $location->location,
-                $journey->start_date,
-                $journey->end_date
-            );
+        if (request()->has('show_weather')) {
+            foreach ($journey->locations as $location) {
+                $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
+                    $location->location,
+                    $journey->start_date,
+                    $journey->end_date
+                );
+            }
         }
 
         return view('journey.show', compact('journey', 'weatherData'));
+    }
+
+    public function getWeatherData(Request $request, Journey $journey)
+    {
+        try {
+            $location = $request->input('location');
+            if (!$location) {
+                return response()->json(['error' => 'Location is required'], 400);
+            }
+
+            $weatherData = $this->weatherService->getWeatherForecast(
+                $location,
+                $journey->start_date,
+                $journey->end_date
+            );
+
+            if (!$weatherData) {
+                return response()->json(['error' => 'Failed to fetch weather data'], 500);
+            }
+
+            return response()->json($weatherData);
+        } catch (\Exception $e) {
+            \Log::error('Weather data fetch error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch weather data'], 500);
+        }
     }
 
     public function analyze(Request $request, Journey $journey)
     {
         try {
             $currentLocation = $request->input('current_location');
+            $customQuestion = $request->input('custom_question');
             
             if (!$currentLocation) {
                 return response()->json([
@@ -162,8 +194,18 @@ class JourneyController extends Controller
                 ], 400);
             }
 
+            // Get weather data for each location
+            $weatherData = [];
+            foreach ($journey->locations as $location) {
+                $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
+                    $location->location,
+                    $journey->start_date,
+                    $journey->end_date
+                );
+            }
+
             $gptService = new GptService();
-            $response = $gptService->analyzeJourney($journey, $currentLocation);
+            $response = $gptService->analyzeJourney($journey, $currentLocation, $customQuestion);
             
             // Log the response for debugging
             \Log::info('GPT Analysis Response:', $response);

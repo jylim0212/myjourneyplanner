@@ -217,6 +217,41 @@
             background: linear-gradient(135deg, #dc3545, #ff4d4d);
             color: white;
         }
+
+        /* Submenu Styles */
+        .submenu {
+            display: none;
+            padding-left: 20px;
+        }
+
+        .submenu.active {
+            display: block;
+        }
+
+        .submenu-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .submenu-toggle i {
+            transition: transform 0.3s;
+        }
+
+        .submenu-toggle.active i {
+            transform: rotate(180deg);
+        }
+
+        .submenu a {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .submenu a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -224,10 +259,12 @@
         <!-- Admin Sidebar -->
         <div id="sidebar">
             <a href="javascript:void(0)" onclick="toggleSidebar()" style="text-align: right; padding-right: 15px;">&times;</a>
-            <a href="{{ route('admin.dashboard') }}" onclick="closeSidebar()">📊 Dashboard</a>
             <a href="{{ route('admin.users') }}" onclick="closeSidebar()">👥 Users</a>
-            <a href="{{ route('admin.weather') }}" onclick="closeSidebar()">🌤️ Weather API</a>
-            <a href="{{ route('admin.gpt') }}" onclick="closeSidebar()">🤖 GPT API</a>
+            
+            <!-- API Management Section -->
+            <a href="{{ route('admin.weather.index') }}" onclick="closeSidebar()">🌤️ Weather API</a>
+            <a href="{{ route('admin.gpt.index') }}" onclick="closeSidebar()">🤖 GPT API</a>
+            <a href="{{ route('admin.map.index') }}" onclick="closeSidebar()">🗺️ Map API</a>
         </div>
 
         <!-- Overlay -->
@@ -236,32 +273,23 @@
         <nav class="navbar navbar-expand-md">
             <div class="container">
                 <span class="menu-icon" onclick="toggleSidebar()">&#9776;</span>
-
                 <a class="navbar-brand" href="{{ url('/') }}">
                     {{ config('app.name', 'Laravel') }} - Admin Panel
                 </a>
                 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <!-- Right Side Of Navbar -->
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item dropdown">
-                            <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                {{ Auth::user()->name }}
-                            </a>
-
-                            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                <a class="dropdown-item" href="{{ route('logout') }}"
-                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <li class="nav-item">
+                            <span class="nav-link">{{ Auth::user()->name }}</span>
+                        </li>
+                        <li class="nav-item">
+                            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="nav-link btn btn-link" style="text-decoration: none;">
                                     {{ __('Logout') }}
-                                </a>
-                                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                                    @csrf
-                                </form>
-                            </div>
+                                </button>
+                            </form>
                         </li>
                     </ul>
                 </div>
@@ -304,6 +332,14 @@
 
         sidebar.classList.remove("active");
         overlay.classList.remove("active");
+    }
+
+    function toggleSubmenu(id) {
+        const submenu = document.getElementById(id);
+        const toggle = submenu.previousElementSibling;
+        
+        submenu.classList.toggle('active');
+        toggle.classList.toggle('active');
     }
     </script>
 </body>

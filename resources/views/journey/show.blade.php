@@ -119,4 +119,69 @@ hr {
     border-color: #dee2e6;
 }
 </style>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch weather data for all locations
+    @foreach($journey->locations as $location)
+        fetch(`/journeys/{{ $journey->id }}/weather?location={{ urlencode($location->location) }}`, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            const weatherContainer = document.getElementById('weather-{{ $location->id }}');
+            
+            // Display weather data
+            let weatherHtml = '';
+            Object.entries(data).forEach(([date, forecast]) => {
+                weatherHtml += `
+                    <div class="weather-day mb-3">
+                        <h6 class="mb-2">${new Date(date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })}</h6>
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="http://openweathermap.org/img/w/${forecast.icon}.png" 
+                                 alt="Weather icon" class="weather-icon me-2">
+                            <span class="temperature">${forecast.temperature}°C</span>
+                        </div>
+                        <p class="mb-1">
+                            <strong>Conditions:</strong> 
+                            ${forecast.description.charAt(0).toUpperCase() + forecast.description.slice(1)}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Humidity:</strong> 
+                            ${forecast.humidity}%
+                        </p>
+                        <p class="mb-0">
+                            <strong>Wind Speed:</strong> 
+                            ${forecast.wind_speed} m/s
+                        </p>
+                    </div>
+                `;
+            });
+            
+            weatherContainer.innerHTML = weatherHtml;
+        })
+        .catch(error => {
+            const weatherContainer = document.getElementById('weather-{{ $location->id }}');
+            weatherContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    Failed to load weather data: ${error.message}
+                </div>
+            `;
+        });
+    @endforeach
+});
+</script>
+@endpush
 @endsection 

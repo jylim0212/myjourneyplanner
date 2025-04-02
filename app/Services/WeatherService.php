@@ -25,81 +25,126 @@ class WeatherService
             return Cache::get($cacheKey);
         }
 
-        // Get coordinates for the location
-        $coordinates = $this->getCoordinates($location);
-        if (!$coordinates) {
-            return null;
-        }
+        try {
+            // Get coordinates for the location
+            $coordinates = $this->getCoordinates($location);
+            if (!$coordinates) {
+                \Log::error("Failed to get coordinates for location: {$location}");
+                return null;
+            }
 
-        // Get weather data
-        $response = Http::withOptions([
-            'verify' => false, // Disable SSL verification
-            'timeout' => 30
-        ])->get("{$this->baseUrl}/forecast", [
-            'lat' => $coordinates['lat'],
-            'lon' => $coordinates['lon'],
-            'appid' => $this->apiKey,
-            'units' => 'metric',
-        ]);
+            \Log::info("Getting weather forecast for location: {$location}", [
+                'coordinates' => $coordinates,
+                'startDate' => $startDate,
+                'endDate' => $endDate
+            ]);
 
-        if (!$response->successful()) {
-            return null;
-        }
+            // Get weather data
+            $response = Http::withOptions([
+                'verify' => false, // Disable SSL verification
+                'timeout' => 30
+            ])->get("{$this->baseUrl}/forecast", [
+                'lat' => $coordinates['lat'],
+                'lon' => $coordinates['lon'],
+                'appid' => $this->apiKey,
+                'units' => 'metric',
+            ]);
 
-        $weatherData = $response->json();
-        $forecasts = [];
-        
-        // Convert dates to timestamps for comparison
-        $startTimestamp = strtotime($startDate);
-        $endTimestamp = strtotime($endDate);
-        
-        // Group forecasts by date
-        foreach ($weatherData['list'] as $item) {
-            $itemDate = strtotime(date('Y-m-d', $item['dt']));
+            if (!$response->successful()) {
+                \Log::error("Weather API request failed", [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'location' => $location
+                ]);
+                return null;
+            }
+
+            $weatherData = $response->json();
+            $forecasts = [];
             
-            // Only include forecasts between start and end date
-            if ($itemDate >= $startTimestamp && $itemDate <= $endTimestamp) {
-                $date = date('Y-m-d', $itemDate);
-                if (!isset($forecasts[$date])) {
-                    $forecasts[$date] = [
-                        'temperature' => round($item['main']['temp']),
-                        'description' => $item['weather'][0]['description'],
-                        'icon' => $item['weather'][0]['icon'],
-                        'humidity' => $item['main']['humidity'],
-                        'wind_speed' => $item['wind']['speed'],
-                        'date' => $date
-                    ];
+            // Convert dates to timestamps for comparison
+            $startTimestamp = strtotime($startDate);
+            $endTimestamp = strtotime($endDate);
+            
+            // Group forecasts by date
+            foreach ($weatherData['list'] as $item) {
+                $itemDate = strtotime(date('Y-m-d', $item['dt']));
+                
+                // Only include forecasts between start and end date
+                if ($itemDate >= $startTimestamp && $itemDate <= $endTimestamp) {
+                    $date = date('Y-m-d', $itemDate);
+                    if (!isset($forecasts[$date])) {
+                        $forecasts[$date] = [
+                            'temperature' => round($item['main']['temp']),
+                            'description' => $item['weather'][0]['description'],
+                            'icon' => $item['weather'][0]['icon'],
+                            'humidity' => $item['main']['humidity'],
+                            'wind_speed' => $item['wind']['speed'],
+                            'date' => $date
+                        ];
+                    }
                 }
             }
+
+            // Sort forecasts by date
+            ksort($forecasts);
+
+            // Cache the result for 1 hour
+            Cache::put($cacheKey, $forecasts, now()->addHour());
+
+            \Log::info("Successfully retrieved weather forecast for {$location}", [
+                'forecast_count' => count($forecasts)
+            ]);
+
+            return $forecasts;
+        } catch (\Exception $e) {
+            \Log::error("Error getting weather forecast for {$location}: " . $e->getMessage());
+            return null;
         }
-
-        // Sort forecasts by date
-        ksort($forecasts);
-
-        // Cache the result for 1 hour
-        Cache::put($cacheKey, $forecasts, now()->addHour());
-
-        return $forecasts;
     }
 
     protected function getCoordinates($location)
     {
-        $response = Http::withOptions([
-            'verify' => false, // Disable SSL verification
-            'timeout' => 30
-        ])->get("{$this->baseUrl}/weather", [
-            'q' => $location . ',MY',
-            'appid' => $this->apiKey,
-        ]);
+        try {
+            \Log::info("Getting coordinates for location: {$location}");
 
-        if (!$response->successful()) {
+            $response = Http::withOptions([
+                'verify' => false, // Disable SSL verification
+                'timeout' => 30
+            ])->get("{$this->baseUrl}/weather", [
+                'q' => $location . ',MY',
+                'appid' => $this->apiKey,
+            ]);
+
+            if (!$response->successful()) {
+                \Log::error("Coordinates API request failed", [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'location' => $location
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            \Log::info("Successfully retrieved coordinates for {$location}", [
+                'coordinates' => [
+                    'lat' => $data['coord']['lat'],
+                    'lon' => $data['coord']['lon']
+                ]
+            ]);
+
+            return [
+                'lat' => $data['coord']['lat'],
+                'lon' => $data['coord']['lon'],
+            ];
+        } catch (\Exception $e) {
+            \Log::error("Error getting coordinates for {$location}: " . $e->getMessage());
             return null;
         }
+    }
 
-        $data = $response->json();
-        return [
-            'lat' => $data['coord']['lat'],
-            'lon' => $data['coord']['lon'],
-        ];
+    public function updateApiKey($apiKey)
+    {
+        config(['services.openweather.api_key' => $apiKey]);
     }
 } 

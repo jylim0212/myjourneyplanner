@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\JourneyController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\RecommendationsController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\WeatherController as AdminWeatherController;
+use App\Http\Controllers\Admin\GptController as AdminGptController;
+use App\Http\Controllers\Admin\MapController as AdminMapController;
 
 // Root route - redirect to login if not authenticated, otherwise to appropriate dashboard
 Route::get('/', function () {
@@ -25,18 +29,28 @@ Route::middleware(['auth', 'user.only'])->group(function () {
     Route::get('/recommendations', [RecommendationsController::class, 'index'])->name('recommendations.index');
     Route::get('/journeys/{journey}', [JourneyController::class, 'show'])->name('journey.show');
     Route::post('/journeys/{journey}/analyze', [JourneyController::class, 'analyze'])->name('journey.analyze');
+    Route::get('/journeys/{journey}/weather', [JourneyController::class, 'getWeatherData'])->name('journey.weather');
 });
 
 Auth::routes();
 
 // Admin Routes (only accessible by admin users)
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
-    Route::get('/', [App\Http\Controllers\AdminController::class, 'index'])->name('admin.dashboard');
-    Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])->name('admin.users');
-    Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'deleteUser'])->name('admin.users.delete');
-    Route::put('/users/{id}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('admin.users.update');
-    Route::get('/weather-api', [App\Http\Controllers\AdminController::class, 'weatherApi'])->name('admin.weather');
-    Route::get('/gpt-api', [App\Http\Controllers\AdminController::class, 'gptApi'])->name('admin.gpt');
+    Route::get('/', [AdminController::class, 'users'])->name('admin.dashboard');
+    Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
+    Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
+    Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('admin.users.update');
+    
+    // API Management Routes
+    Route::get('/weather', [AdminWeatherController::class, 'index'])->name('admin.weather.index');
+    Route::put('/weather', [AdminWeatherController::class, 'update'])->name('admin.weather.update');
+    
+    Route::get('/gpt', [AdminGptController::class, 'index'])->name('admin.gpt.index');
+    Route::put('/gpt', [AdminGptController::class, 'update'])->name('admin.gpt.update');
+    Route::put('/gpt/questions', [AdminGptController::class, 'updateQuestions'])->name('admin.gpt.questions');
+    
+    Route::get('/map', [AdminMapController::class, 'index'])->name('admin.map.index');
+    Route::put('/map', [AdminMapController::class, 'update'])->name('admin.map.update');
 });
 
 #Admin password: Admin123

@@ -12,71 +12,66 @@
                         @csrf
                         @method('PUT')
                         <div class="mb-3">
-                            <label for="api_key" class="form-label">API Key</label>
-                            <input type="password" class="form-control" id="api_key" name="api_key" value="{{ old('api_key', config('services.openai.api_key')) }}">
+                            <label for="api_key" class="form-label">GPT API Key</label>
+                            <input type="text" class="form-control" id="api_key" name="api_key" value="{{ old('api_key', config('services.gpt.api_key')) }}">
                         </div>
                         <div class="mb-3">
-                            <label for="model" class="form-label">Default Model</label>
-                            <select class="form-select" id="model" name="model">
-                                <option value="gpt-3.5-turbo" {{ config('services.openai.model') === 'gpt-3.5-turbo' ? 'selected' : '' }}>GPT-3.5 Turbo</option>
-                                <option value="gpt-4" {{ config('services.openai.model') === 'gpt-4' ? 'selected' : '' }}>GPT-4</option>
-                            </select>
+                            <label for="api_host" class="form-label">GPT API Host</label>
+                            <input type="text" class="form-control" id="api_host" name="api_host" value="{{ old('api_host', config('services.gpt.api_host')) }}">
                         </div>
                         <div class="mb-3">
-                            <label for="max_tokens" class="form-label">Max Tokens</label>
-                            <input type="number" class="form-control" id="max_tokens" name="max_tokens" value="{{ old('max_tokens', config('services.openai.max_tokens')) }}">
+                            <label for="api_url" class="form-label">GPT API URL</label>
+                            <input type="text" class="form-control" id="api_url" name="api_url" value="{{ old('api_url', config('services.gpt.api_url')) }}">
                         </div>
-                        <div class="mb-3">
-                            <label for="temperature" class="form-label">Temperature</label>
-                            <input type="number" step="0.1" min="0" max="2" class="form-control" id="temperature" name="temperature" value="{{ old('temperature', config('services.openai.temperature')) }}">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save Configuration</button>
+                        <button type="submit" class="btn btn-primary">Save API Configuration</button>
                     </form>
                 </div>
             </div>
 
             <div class="card mt-4">
                 <div class="card-body">
-                    <h5 class="card-title">API Usage Statistics</h5>
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Requests</th>
-                                    <th>Tokens Used</th>
-                                    <th>Cost</th>
-                                    <th>Success Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Today</td>
-                                    <td>0</td>
-                                    <td>0</td>
-                                    <td>$0.00</td>
-                                    <td>0%</td>
-                                </tr>
-                                <tr>
-                                    <td>This Week</td>
-                                    <td>0</td>
-                                    <td>0</td>
-                                    <td>$0.00</td>
-                                    <td>0%</td>
-                                </tr>
-                                <tr>
-                                    <td>This Month</td>
-                                    <td>0</td>
-                                    <td>0</td>
-                                    <td>$0.00</td>
-                                    <td>0%</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <h5 class="card-title">Default Analysis Questions</h5>
+                    <form action="{{ route('admin.gpt.questions') }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <div class="mb-3">
+                            <label for="default_question" class="form-label">Default Question</label>
+                            <textarea class="form-control" id="default_question" name="default_question" rows="3">{{ old('default_question', config('services.gpt.default_question')) }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="follow_up_questions" class="form-label">Follow-up Questions</label>
+                            <div id="follow-up-questions">
+                                @foreach(old('follow_up_questions', config('services.gpt.follow_up_questions', [])) as $index => $question)
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="follow_up_questions[]" value="{{ $question }}" placeholder="Enter follow-up question">
+                                    <button type="button" class="btn btn-danger" onclick="removeQuestion(this)">Remove</button>
+                                </div>
+                                @endforeach
+                            </div>
+                            <button type="button" class="btn btn-secondary mt-2" onclick="addQuestion()">Add Follow-up Question</button>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Questions</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function addQuestion() {
+    const container = document.getElementById('follow-up-questions');
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <input type="text" class="form-control" name="follow_up_questions[]" placeholder="Enter follow-up question">
+        <button type="button" class="btn btn-danger" onclick="removeQuestion(this)">Remove</button>
+    `;
+    container.appendChild(div);
+}
+
+function removeQuestion(button) {
+    button.parentElement.remove();
+}
+</script>
 @endsection 

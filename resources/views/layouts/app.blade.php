@@ -9,16 +9,13 @@
 
     <title>MyJourney Planner</title>
 
-    <!-- Scripts -->
-    <script src="{{ asset('js/app.js') }}" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css?family=Nunito&display=swap" rel="stylesheet">
 
     <!-- Styles -->
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
         /* Background Image */
@@ -177,20 +174,16 @@
                                 </li>
                             @endif
                         @else
-                            <li class="nav-item dropdown">
-                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    {{ Auth::user()->name }}
-                                </a>
-
-                                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <a class="dropdown-item" href="{{ route('logout') }}"
-                                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            <li class="nav-item">
+                                <span class="nav-link">{{ Auth::user()->name }}</span>
+                            </li>
+                            <li class="nav-item">
+                                <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="nav-link btn btn-link" style="text-decoration: none;">
                                         {{ __('Logout') }}
-                                    </a>
-                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                                        @csrf
-                                    </form>
-                                </div>
+                                    </button>
+                                </form>
                             </li>
                         @endguest
                     </ul>
@@ -202,6 +195,10 @@
             @yield('content')
         </main>
     </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('js/app.js') }}"></script>
 
     <script>
     function toggleSidebar() {
@@ -220,6 +217,19 @@
     // Clicking on overlay closes sidebar
     document.getElementById("overlay").addEventListener("click", function () {
         toggleSidebar();
+    });
+
+    // Initialize dropdowns
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all dropdown toggles
+        var dropdownToggles = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+        
+        // Initialize each dropdown
+        dropdownToggles.forEach(function(toggle) {
+            new bootstrap.Dropdown(toggle, {
+                autoClose: true
+            });
+        });
     });
 </script>
 </body>

@@ -3,145 +3,140 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class GptService
 {
-    protected $apiKey;
-    protected $apiHost;
-    protected $apiUrl;
-
-    public function __construct()
+    public function updateApiKey($apiKey)
     {
-        $this->apiKey = config('services.gpt.api_key');
-        $this->apiHost = config('services.gpt.api_host');
-        $this->apiUrl = config('services.gpt.api_url');
+        // Update the .env file
+        $envFile = base_path('.env');
+        $envContent = file_get_contents($envFile);
+        $envContent = preg_replace(
+            '/GPT_API_KEY=.*/',
+            'GPT_API_KEY=' . $apiKey,
+            $envContent
+        );
+        file_put_contents($envFile, $envContent);
     }
 
-    public function analyzeJourney($journey, $currentLocation)
+    public function updateApiConfig($apiHost, $apiUrl)
+    {
+        // Update the .env file
+        $envFile = base_path('.env');
+        $envContent = file_get_contents($envFile);
+        
+        // Update API Host
+        $envContent = preg_replace(
+            '/GPT_API_HOST=.*/',
+            'GPT_API_HOST=' . $apiHost,
+            $envContent
+        );
+        
+        // Update API URL
+        $envContent = preg_replace(
+            '/GPT_API_URL=.*/',
+            'GPT_API_URL=' . $apiUrl,
+            $envContent
+        );
+        
+        file_put_contents($envFile, $envContent);
+    }
+
+    public function updateQuestions($defaultQuestion, $followUpQuestions)
+    {
+        // Update the .env file
+        $envFile = base_path('.env');
+        $envContent = file_get_contents($envFile);
+        
+        // Update default question
+        $envContent = preg_replace(
+            '/GPT_DEFAULT_QUESTION=.*/',
+            'GPT_DEFAULT_QUESTION=' . str_replace('"', '\\"', $defaultQuestion),
+            $envContent
+        );
+        
+        // Update follow-up questions
+        $followUpQuestionsStr = implode('|', array_map(function($q) {
+            return str_replace('"', '\\"', $q);
+        }, $followUpQuestions));
+        
+        $envContent = preg_replace(
+            '/GPT_FOLLOW_UP_QUESTIONS=.*/',
+            'GPT_FOLLOW_UP_QUESTIONS=' . $followUpQuestionsStr,
+            $envContent
+        );
+        
+        file_put_contents($envFile, $envContent);
+    }
+
+    public function analyzeJourney($journey, $currentLocation, $customQuestion = null)
     {
         try {
-            $prompt = $this->buildPrompt($journey, $currentLocation);
+            $question = $customQuestion ?? config('services.gpt.default_question');
             
-            // Log the request for debugging
-            \Log::info('GPT API Request:', [
-                'url' => $this->apiUrl,
-                'prompt' => $prompt
-            ]);
+            // Prepare the prompt
+            $prompt = $this->preparePrompt($journey, $question);
             
-            $response = Http::withOptions([
-                'verify' => false,
-                'timeout' => 60, // Increase timeout to 60 seconds
-                'connect_timeout' => 30, // Add connection timeout
-                'retry' => 2, // Add retry attempts
-                'retry_delay' => 1000 // 1 second delay between retries
-            ])
-            ->withHeaders([
-                'X-RapidAPI-Key' => $this->apiKey,
-                'X-RapidAPI-Host' => $this->apiHost,
+            // Make the API call
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.gpt.api_key'),
                 'Content-Type' => 'application/json'
-            ])
-            ->post($this->apiUrl, [
+            ])->post(config('services.gpt.api_url'), [
+                'model' => 'gpt-3.5-turbo',
                 'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are a helpful assistant that analyzes travel journeys and provides recommendations.'
+                    ],
                     [
                         'role' => 'user',
                         'content' => $prompt
                     ]
                 ],
-                'web_access' => false
+                'temperature' => 0.7
             ]);
 
             if (!$response->successful()) {
-                \Log::error('GPT API Error Response:', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-                throw new \Exception('Failed to get GPT response: ' . $response->body());
+                Log::error('GPT API Error: ' . $response->body());
+                throw new \Exception('Failed to get response from GPT API');
             }
 
-            $data = $response->json();
-            
-            // Log the response for debugging
-            \Log::info('GPT API Response:', $data);
-            
-            // Return the raw response for now
-            return $data;
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            \Log::error('GPT API Connection Error: ' . $e->getMessage());
-            throw new \Exception('Connection to GPT API failed. Please try again later.');
+            $result = $response->json();
+            $analysis = $result['choices'][0]['message']['content'];
+
+            // Add follow-up questions if configured
+            $followUpQuestions = config('services.gpt.follow_up_questions', []);
+            if (!empty($followUpQuestions)) {
+                $analysis .= "\n\nFollow-up Questions:\n";
+                foreach ($followUpQuestions as $index => $question) {
+                    $analysis .= ($index + 1) . ". " . $question . "\n";
+                }
+            }
+
+            return $analysis;
         } catch (\Exception $e) {
-            \Log::error('GPT API Error: ' . $e->getMessage());
+            Log::error('GPT Analysis Error: ' . $e->getMessage());
             throw $e;
         }
     }
 
-    protected function buildPrompt($journey, $currentLocation)
+    private function preparePrompt($journey, $question)
     {
-        $locations = $journey->locations->pluck('location')->toArray();
-        $weatherService = new WeatherService();
+        $prompt = "Journey Details:\n";
+        $prompt .= "Title: " . $journey->title . "\n";
+        $prompt .= "Description: " . $journey->description . "\n";
+        $prompt .= "Start Date: " . $journey->start_date . "\n";
+        $prompt .= "End Date: " . $journey->end_date . "\n\n";
+        $prompt .= "Locations:\n";
         
-        // Get weather data for each location
-        $weatherData = [];
-        foreach ($locations as $location) {
-            try {
-                $weatherData[$location] = $weatherService->getWeatherForecast(
-                    $location,
-                    $journey->start_date,
-                    $journey->end_date
-                );
-            } catch (\Exception $e) {
-                \Log::error("Weather data fetch failed for {$location}: " . $e->getMessage());
-                $weatherData[$location] = "Weather data unavailable";
-            }
+        foreach ($journey->locations as $location) {
+            $prompt .= "- " . $location->name . " (" . $location->latitude . ", " . $location->longitude . ")\n";
         }
-
-        return "I am planning a journey with the following details:
-Journey Name: {$journey->journey_name}
-Start Date: {$journey->start_date}
-End Date: {$journey->end_date}
-Current Location: {$currentLocation}
-Preferred Events: {$journey->preferred_events}
-
-Locations to Visit:
-" . implode("\n", array_map(function($location) use ($weatherData) {
-            $weather = isset($weatherData[$location]) ? json_encode($weatherData[$location]) : "Weather data unavailable";
-            return "- {$location}\n  Weather Forecast: {$weather}";
-        }, $locations)) . "
-
-Please provide a user-friendly recommendation in this exact format:
-
-🚗 TRAVEL SUMMARY
-----------------
-• Total Time: [time]
-• Route: [route]
-• Weather: [key weather points]
-
-📅 ITINERARY
------------
-Day 1: [date]
-------------
-• Places: [top 2 places]
-• Food: [best food spot]
-• Tip: [key tip]
-
-Day 2: [date]
-------------
-• Places: [top 2 places]
-• Food: [best food spot]
-• Tip: [key tip]
-
-Day 3: [date]
-------------
-• Places: [top 2 places]
-• Food: [best food spot]
-• Tip: [key tip]
-
-⚠️ IMPORTANT NOTES
------------------
-• Weather: [weather warning]
-• Travel: [travel tip]
-• Food: [food tip]
-
-Keep it brief and easy to read. Use simple language and clear formatting.";
+        
+        $prompt .= "\nQuestion: " . $question;
+        
+        return $prompt;
     }
 
     protected function getWeatherData($journey)
