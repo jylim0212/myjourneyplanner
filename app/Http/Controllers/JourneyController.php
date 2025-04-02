@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Journey;
 use App\Models\JourneyLocation;
+use App\Models\Recommendation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Services\WeatherService;
 use App\Services\GptService;
-use App\Models\Recommendation;
 
 class JourneyController extends Controller
 {
@@ -177,7 +178,7 @@ class JourneyController extends Controller
 
             return response()->json($weatherData);
         } catch (\Exception $e) {
-            \Log::error('Weather data fetch error: ' . $e->getMessage());
+            Log::error('Weather data fetch error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch weather data'], 500);
         }
     }
@@ -208,18 +209,14 @@ class JourneyController extends Controller
             $response = $gptService->analyzeJourney($journey, $currentLocation, $customQuestion);
             
             // Log the response for debugging
-            \Log::info('GPT Analysis Response:', $response);
-            
-            // Format the recommendation
-            $recommendationText = $response['result'] ?? json_encode($response);
+            Log::info('GPT Analysis Response', ['response' => $response]);
             
             // Create recommendation record
-            $recommendation = new Recommendation([
-                'journey_id' => $journey->id,
-                'current_location' => $currentLocation,
-                'recommendation' => $recommendationText,
-                'generated_at' => now()
-            ]);
+            $recommendation = new Recommendation();
+            $recommendation->journey_id = $journey->id;
+            $recommendation->current_location = $currentLocation;
+            $recommendation->recommendation = $response; // Direct string from GPT service
+            $recommendation->generated_at = now();
             $recommendation->save();
 
             return response()->json([
@@ -228,11 +225,16 @@ class JourneyController extends Controller
                 'recommendation' => $recommendation
             ]);
         } catch (\Exception $e) {
-            \Log::error('Journey Analysis Error: ' . $e->getMessage());
+            Log::error('Journey Analysis Error: ' . $e->getMessage(), [
+                'journey_id' => $journey->id,
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
             return response()->json([
                 'error' => 'Error analyzing journey: ' . $e->getMessage()
             ], 500);
         }
     }
 }
-

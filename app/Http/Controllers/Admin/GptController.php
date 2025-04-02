@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\GptApiSetting;
 use App\Services\GptService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,8 @@ class GptController extends Controller
 
     public function index()
     {
-        return view('admin.gpt.index');
+        $setting = GptApiSetting::where('is_active', true)->first();
+        return view('admin.gpt.index', compact('setting'));
     }
 
     public function update(Request $request)
@@ -49,23 +51,29 @@ class GptController extends Controller
     {
         try {
             $request->validate([
-                'default_question' => 'required|string',
-                'follow_up_questions' => 'array',
-                'follow_up_questions.*' => 'string'
+                'default_question' => 'required|string|min:10',
             ]);
 
-            // Update the questions in the config
-            $this->gptService->updateQuestions(
-                $request->default_question,
-                $request->follow_up_questions ?? []
-            );
+            // Deactivate all existing settings
+            GptApiSetting::query()->update(['is_active' => false]);
+
+            // Create new setting
+            GptApiSetting::create([
+                'default_question' => $request->default_question,
+                'is_active' => true
+            ]);
 
             return redirect()->route('admin.gpt.index')
                 ->with('success', 'GPT questions updated successfully.');
         } catch (\Exception $e) {
-            Log::error('Failed to update GPT questions: ' . $e->getMessage());
+            Log::error('Failed to update GPT questions: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
             return redirect()->route('admin.gpt.index')
                 ->with('error', 'Failed to update GPT questions. Please try again.');
         }
     }
-} 
+}

@@ -41,6 +41,12 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
+        if (!$user->is_active) {
+            $this->guard()->logout();
+            return redirect()->route('login')
+                ->with('error', 'Your account has been deactivated. Please contact the administrator.');
+        }
+
         if ($user->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }

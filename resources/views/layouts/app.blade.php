@@ -137,8 +137,13 @@
             <a href="javascript:void(0)" onclick="toggleSidebar()" style="text-align: right; padding-right: 15px;">&times;</a>
             <a href="{{ route('journey.index') }}" onclick="closeSidebar()">🏠 Home</a>
             <a href="{{ route('recommendations.index') }}" onclick="closeSidebar()">🤖 AI Recommendation</a>
+            @auth
+                <a href="{{ route('profile.index') }}" onclick="closeSidebar()">👤 Profile</a>
+                @if(auth()->user()->is_admin)
+                    <a href="{{ route('admin.dashboard') }}" onclick="closeSidebar()">⚙️ Admin Panel</a>
+                @endif
+            @endauth
         </div>
-
 
         <!-- Overlay -->
         <div id="overlay" onclick="toggleSidebar()"></div>
@@ -151,16 +156,21 @@
                 @endauth
 
                 <a class="navbar-brand" href="{{ url('/') }}">
-                    MyJourney Planner
+                    {{ config('app.name', 'MyJourney Planner') }}
                 </a>
-                
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <!-- Left Side Of Navbar -->
+                    <ul class="navbar-nav me-auto">
+                    </ul>
+
                     <!-- Right Side Of Navbar -->
                     <ul class="navbar-nav ms-auto">
+                        <!-- Authentication Links -->
                         @guest
                             @if (Route::has('login'))
                                 <li class="nav-item">
