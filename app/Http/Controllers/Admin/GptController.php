@@ -20,6 +20,23 @@ class GptController extends Controller
     public function index()
     {
         $setting = GptApiSetting::where('is_active', true)->first();
+        
+        if (!$setting) {
+            // Create a default setting if none exists
+            $setting = GptApiSetting::create([
+                'api_key' => env('GPT_API_KEY', ''),
+                'api_host' => env('GPT_API_HOST', 'api.openai.com'),
+                'api_url' => env('GPT_API_URL', 'https://api.openai.com/v1/chat/completions'),
+                'is_active' => true,
+                'default_question' => "Based on the journey details and weather forecast provided, please analyze this trip and provide recommendations in the following format:\n\n1. Weather Overview:\n   - Summarize the weather conditions for each day\n   - Highlight any weather-related concerns\n\n2. Daily Itinerary Suggestions:\n   - Break down by date\n   - Recommend indoor/outdoor activities based on weather\n   - Suggest local attractions and dining options\n   - Consider travel time between locations\n\n3. Essential Preparations:\n   - What to pack based on weather and activities\n   - Transportation recommendations\n   - Health and safety tips\n\n4. Local Tips:\n   - Cultural considerations\n   - Best times for various activities\n   - Alternative plans for weather changes\n\nPlease format the response with clear headings, bullet points, and ensure it's easy to read."
+            ]);
+        }
+        
+        // Check if API key is not set
+        if (empty($setting->api_key)) {
+            session()->flash('warning', 'GPT API key is not configured. Journey analysis will not work until you set up the API key.');
+        }
+        
         return view('admin.gpt.index', compact('setting'));
     }
 
@@ -54,14 +71,23 @@ class GptController extends Controller
                 'default_question' => 'required|string|min:10',
             ]);
 
-            // Deactivate all existing settings
-            GptApiSetting::query()->update(['is_active' => false]);
-
-            // Create new setting
-            GptApiSetting::create([
-                'default_question' => $request->default_question,
-                'is_active' => true
-            ]);
+            // Get current active setting
+            $setting = GptApiSetting::where('is_active', true)->first();
+            
+            if ($setting) {
+                // Update existing setting
+                $setting->default_question = $request->default_question;
+                $setting->save();
+            } else {
+                // Create new setting with defaults
+                GptApiSetting::create([
+                    'default_question' => $request->default_question,
+                    'api_key' => env('GPT_API_KEY', ''),
+                    'api_host' => env('GPT_API_HOST', 'api.openai.com'),
+                    'api_url' => env('GPT_API_URL', 'https://api.openai.com/v1/chat/completions'),
+                    'is_active' => true
+                ]);
+            }
 
             return redirect()->route('admin.gpt.index')
                 ->with('success', 'GPT questions updated successfully.');

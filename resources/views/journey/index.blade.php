@@ -33,9 +33,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Journey Name</th>
+                                <th>Starting Location</th>
                                 <th>Locations</th>
                                 <th>Start Date</th>
                                 <th>End Date</th>
+                                <th>Weather Safety</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -43,6 +45,7 @@
                             @foreach($journeys as $journey)
                                 <tr>
                                     <td>{{ $journey->journey_name }}</td>
+                                    <td><span class="badge bg-info">{{ $journey->starting_location }}</span></td>
                                     <td>
                                         @foreach($journey->locations as $location)
                                             <span class="badge bg-primary me-1">{{ $location->location }}</span>
@@ -50,6 +53,19 @@
                                     </td>
                                     <td>{{ $journey->start_date }}</td>
                                     <td>{{ $journey->end_date }}</td>
+                                    <td>
+                                        @if(isset($journey->weather_safety))
+                                            @if($journey->weather_safety['is_safe'])
+                                                <span class="badge bg-success"><i class="fas fa-check"></i> Safe</span>
+                                            @else
+                                                <span class="badge bg-danger" data-bs-toggle="tooltip" data-bs-html="true" title="{!! implode('<br>', $journey->weather_safety['warnings']) !!}">
+                                                    <i class="fas fa-exclamation-triangle"></i> Warning
+                                                </span>
+                                            @endif
+                                        @else
+                                            <span class="badge bg-secondary"><i class="fas fa-question"></i> Unknown</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <div class="btn-group">
                                             <a href="{{ route('journey.show', ['journey' => $journey, 'show_weather' => true]) }}" 
@@ -88,6 +104,17 @@
     </div>
 </div>
 
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+@endpush
+
 <!-- Analyze Modal -->
 <div class="modal fade" id="analyzeModal" tabindex="-1" aria-labelledby="analyzeModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -99,15 +126,10 @@
             <div class="modal-body">
                 <form id="analyzeForm">
                     @csrf
-                    <input type="hidden" id="journeyId" name="journey_id">
-                    <div class="mb-3">
-                        <label for="currentLocation" class="form-label">Where are you currently?</label>
-                        <input type="text" class="form-control" id="currentLocation" name="current_location" required>
-                    </div>
+                    <input type="hidden" id="journeyId" name="journeyId">
                     <div class="mb-3">
                         <label for="customQuestion" class="form-label">Custom Analysis Question (Optional)</label>
-                        <textarea class="form-control" id="customQuestion" name="custom_question" rows="3" placeholder="Leave empty to use the default question"></textarea>
-                        <div class="form-text">If left empty, the system will use the default analysis question.</div>
+                        <textarea class="form-control" id="customQuestion" name="customQuestion" rows="3" placeholder="Ask a specific question about your journey..."></textarea>
                     </div>
                 </form>
             </div>
@@ -193,13 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
         analyzeSubmitBtn.addEventListener('click', function() {
             console.log('Submit button clicked'); // Debug log
             const journeyId = document.getElementById('journeyId').value;
-            const currentLocation = document.getElementById('currentLocation').value;
             const customQuestion = document.getElementById('customQuestion').value;
-
-            if (!currentLocation) {
-                alert('Please enter your current location');
-                return;
-            }
 
             // Show loading state
             this.disabled = true;
@@ -213,7 +229,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
                 body: JSON.stringify({
-                    current_location: currentLocation,
                     custom_question: customQuestion
                 })
             })

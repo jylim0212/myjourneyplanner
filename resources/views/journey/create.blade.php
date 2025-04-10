@@ -23,6 +23,11 @@
         </div>
 
         <div class="form-group">
+            <label for="starting_location">Starting Location</label>
+            <input id="starting_location" type="text" class="form-control" name="starting_location" required>
+        </div>
+
+        <div class="form-group">
             <label>Locations</label>
             <div class="row">
                 <div class="col-md-6">

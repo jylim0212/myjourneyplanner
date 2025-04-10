@@ -26,7 +26,47 @@ class JourneyController extends Controller
     // Show the list of journeys for the logged-in user
     public function index()
     {
-        $journeys = Journey::where('user_id', Auth::id())->get();
+        $journeys = Journey::where('user_id', Auth::id())->with('locations')->get();
+        
+        // Get weather data and safety status for each journey
+        foreach ($journeys as $journey) {
+            $weatherData = [];
+            $isSafe = true;
+            $weatherWarnings = [];
+
+            foreach ($journey->locations as $location) {
+                $forecast = $this->weatherService->getWeatherForecast(
+                    $location->location,
+                    $journey->start_date,
+                    $journey->end_date
+                );
+
+                if ($forecast) {
+                    foreach ($forecast as $date => $data) {
+                        // Check for severe weather conditions
+                        if (isset($data['weather_id'])) {
+                            // Weather condition codes:
+                            // 2xx: Thunderstorm
+                            // 5xx: Rain
+                            // 6xx: Snow
+                            // 7xx: Atmosphere (fog, dust, etc.)
+                            // 8xx: Clear/Clouds
+                            $weatherId = $data['weather_id'];
+                            if ($weatherId < 800) { // Any severe weather
+                                $isSafe = false;
+                                $weatherWarnings[] = $data['description'] . ' at ' . $location->location . ' on ' . $date;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $journey->weather_safety = [
+                'is_safe' => $isSafe,
+                'warnings' => $weatherWarnings
+            ];
+        }
+
         return view('journey.index', compact('journeys'));
     }
 
@@ -41,6 +81,7 @@ class JourneyController extends Controller
     {
         $request->validate([
             'journey_name' => 'required|string|max:255',
+            'starting_location' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'preferred_events' => 'nullable|string',
@@ -52,6 +93,7 @@ class JourneyController extends Controller
         $journey = Journey::create([
             'user_id' => auth()->id(),
             'journey_name' => $request->journey_name,
+            'starting_location' => $request->starting_location,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'preferred_events' => $request->preferred_events,
@@ -144,18 +186,50 @@ class JourneyController extends Controller
             return redirect()->route('journey.index')->with('error', 'Unauthorized action.');
         }
 
-        $weatherData = [];
-        if (request()->has('show_weather')) {
+        try {
+            // Always load locations
+            $journey->load('locations');
+            
+            // Always fetch weather data
+            $weatherData = [];
             foreach ($journey->locations as $location) {
-                $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
+                Log::info('Fetching weather data for location in show', [
+                    'location' => $location->location,
+                    'start_date' => $journey->start_date,
+                    'end_date' => $journey->end_date
+                ]);
+
+                $forecast = $this->weatherService->getWeatherForecast(
                     $location->location,
                     $journey->start_date,
                     $journey->end_date
                 );
-            }
-        }
 
-        return view('journey.show', compact('journey', 'weatherData'));
+                if ($forecast) {
+                    $weatherData[$location->location] = $forecast;
+                    Log::info('Weather data fetched successfully', [
+                        'location' => $location->location,
+                        'data' => $forecast
+                    ]);
+                } else {
+                    Log::warning('No weather data available for location', [
+                        'location' => $location->location
+                    ]);
+                }
+            }
+
+            return view('journey.show', compact('journey', 'weatherData'));
+        } catch (\Exception $e) {
+            Log::error('Error fetching weather data: ' . $e->getMessage(), [
+                'journey_id' => $journey->id,
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return redirect()->route('journey.index')
+                ->with('error', 'Failed to fetch weather data. Please try again later.');
+        }
     }
 
     public function getWeatherData(Request $request, Journey $journey)
@@ -186,27 +260,54 @@ class JourneyController extends Controller
     public function analyze(Request $request, Journey $journey)
     {
         try {
-            $currentLocation = $request->input('current_location');
+            // Ensure journey is loaded with locations
+            $journey->load(['locations']);
+            
+            // Use starting location from journey
+            $currentLocation = $journey->starting_location;
             $customQuestion = $request->input('custom_question');
             
             if (!$currentLocation) {
                 return response()->json([
-                    'error' => 'Current location is required'
+                    'error' => 'Starting location is not set for this journey'
                 ], 400);
             }
 
             // Get weather data for each location
             $weatherData = [];
             foreach ($journey->locations as $location) {
+                Log::info('Fetching weather data for location', [
+                    'location' => $location->location,
+                    'start_date' => $journey->start_date,
+                    'end_date' => $journey->end_date
+                ]);
+
                 $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
                     $location->location,
                     $journey->start_date,
                     $journey->end_date
                 );
+
+                Log::info('Weather data received', [
+                    'location' => $location->location,
+                    'has_data' => !empty($weatherData[$location->location]),
+                    'data' => $weatherData[$location->location]
+                ]);
             }
 
-            $gptService = new GptService();
-            $response = $gptService->analyzeJourney($journey, $currentLocation, $customQuestion);
+            // Store weather data in journey for GPT analysis
+            foreach ($journey->locations as $location) {
+                $location->weather_data = $weatherData[$location->location] ?? null;
+                
+                Log::info('Weather data assigned to location', [
+                    'location' => $location->location,
+                    'has_weather_data' => !empty($location->weather_data),
+                    'weather_data' => $location->weather_data
+                ]);
+            }
+
+            // Use the injected GPT service
+            $response = $this->gptService->analyzeJourney($journey, $currentLocation, $customQuestion);
             
             // Log the response for debugging
             Log::info('GPT Analysis Response', ['response' => $response]);

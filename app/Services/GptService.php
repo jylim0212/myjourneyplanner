@@ -157,22 +157,22 @@ class GptService
                 'timestamp' => now()
             ]);
             
-            // Extract the result from the response
-            if (isset($data['result'])) {
-                return $data['result'];
+            // Extract the result from the RapidAPI response
+            if (isset($data['bot'])) {
+                return $data['bot'];
             } elseif (isset($data['text'])) {
                 return $data['text'];
-            } elseif (isset($data['bot'])) {
-                return $data['bot'];
+            } elseif (isset($data['result'])) {
+                return $data['result'];
             } elseif (isset($data['message'])) {
                 return $data['message'];
             }
 
-            Log::error('Invalid response format', [
+            Log::error('Invalid response format from RapidAPI', [
                 'available_keys' => array_keys($data),
                 'timestamp' => now()
             ]);
-            throw new \Exception('Invalid response format from GPT API');
+            throw new \Exception('Invalid response format from RapidAPI');
 
         } catch (\Exception $e) {
             Log::error('Journey Analysis Error', [
@@ -192,26 +192,50 @@ class GptService
         $prompt = "Journey Details:\n";
         $prompt .= "Title: " . $journey->journey_name . "\n";
         $prompt .= "Start Date: " . $journey->start_date . "\n";
-        $prompt .= "End Date: " . $journey->end_date . "\n\n";
+        $prompt .= "End Date: " . $journey->end_date . "\n";
+        $prompt .= "Current Location: " . $currentLocation . "\n";
+        
+        if ($journey->preferred_events) {
+            $prompt .= "Preferred Events: " . $journey->preferred_events . "\n";
+        }
+        $prompt .= "\n";
         
         // Add locations with weather data
-        $prompt .= "Locations and Weather:\n";
+        $prompt .= "Locations and Weather Forecast:\n";
         foreach ($journey->locations as $location) {
-            $prompt .= "- " . $location->name . " (" . $location->latitude . ", " . $location->longitude . ")\n";
-        }
-        
-        // Add weather forecast
-        $weatherData = $this->getWeatherData($journey);
-        if ($weatherData) {
-            $prompt .= "\nWeather Forecast:\n" . $weatherData . "\n";
-        }
-        
-        // Add local events if available
-        if (method_exists($journey, 'getLocalEvents')) {
-            $events = $journey->getLocalEvents();
-            if (!empty($events)) {
-                $prompt .= "\nLocal Events:\n" . $events . "\n";
+            $prompt .= "\nLocation: " . $location->location;
+            
+            // Log weather data for debugging
+            Log::debug('Weather data for location', [
+                'location' => $location->location,
+                'has_weather_data' => !empty($location->weather_data),
+                'weather_data' => $location->weather_data ?? null
+            ]);
+            
+            // Add weather data if available
+            if (!empty($location->weather_data)) {
+                $prompt .= "\nWeather Forecast:";
+                foreach ($location->weather_data as $date => $data) {
+                    $prompt .= "\n- " . $date . ": ";
+                    $prompt .= $data['description'];
+                    $prompt .= ", Temperature: " . $data['temperature'] . "°C";
+                    $prompt .= ", Humidity: " . $data['humidity'] . "%";
+                    $prompt .= ", Wind Speed: " . $data['wind_speed'] . " m/s";
+                    
+                    // Log each day's weather data
+                    Log::debug('Daily weather data', [
+                        'location' => $location->location,
+                        'date' => $date,
+                        'data' => $data
+                    ]);
+                }
+            } else {
+                Log::warning('No weather data available for location', [
+                    'location' => $location->location,
+                    'journey_id' => $journey->id
+                ]);
             }
+            $prompt .= "\n";
         }
 
         // Use custom question if provided, otherwise use default from settings
@@ -226,7 +250,7 @@ class GptService
         $weatherData = [];
         foreach ($journey->locations as $location) {
             if (!empty($location->weather_data)) {
-                $weatherData[] = $location->name . ": " . $location->weather_data;
+                $weatherData[] = $location->location . ": " . json_encode($location->weather_data);
             }
         }
         

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\WeatherController as AdminWeatherController;
 use App\Http\Controllers\Admin\GptController as AdminGptController;
 use App\Http\Controllers\Admin\MapController as AdminMapController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecommendationController;
 
 // Root route - redirect to login if not authenticated, otherwise to appropriate dashboard
 Route::get('/', function () {
@@ -31,6 +32,10 @@ Route::middleware(['auth', 'user.only'])->group(function () {
     Route::get('/journeys/{journey}', [JourneyController::class, 'show'])->name('journey.show');
     Route::post('/journeys/{journey}/analyze', [JourneyController::class, 'analyze'])->name('journey.analyze');
     Route::get('/journeys/{journey}/weather', [JourneyController::class, 'getWeatherData'])->name('journey.weather');
+    
+    // Recommendation routes
+    Route::delete('/recommendations/{recommendation}', [RecommendationController::class, 'destroy'])->name('recommendations.destroy');
+    Route::get('/recommendations', [RecommendationController::class, 'index'])->name('recommendations.index');
 });
 
 Auth::routes();

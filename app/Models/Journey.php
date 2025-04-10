@@ -13,6 +13,7 @@ class Journey extends Model
     protected $fillable = [
         'user_id', 
         'journey_name', 
+        'starting_location',
         'start_date', 
         'end_date', 
         'preferred_events'
