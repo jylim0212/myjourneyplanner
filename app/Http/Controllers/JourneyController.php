@@ -326,15 +326,27 @@ class JourneyController extends Controller
                 'recommendation' => $recommendation
             ]);
         } catch (\Exception $e) {
-            Log::error('Journey Analysis Error: ' . $e->getMessage(), [
+            $errorMessage = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8');
+            
+            Log::error('Journey Analysis Error: ' . $errorMessage, [
                 'journey_id' => $journey->id,
                 'exception' => get_class($e),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
+                'trace' => array_map(function($trace) {
+                    return mb_convert_encoding(json_encode($trace), 'UTF-8', 'UTF-8');
+                }, $e->getTrace())
             ]);
             
+            // Log to a separate file for debugging
+            file_put_contents(
+                storage_path('logs/journey_analysis_debug.log'),
+                date('Y-m-d H:i:s') . ' Error: ' . $errorMessage . "\n",
+                FILE_APPEND
+            );
+            
             return response()->json([
-                'error' => 'Error analyzing journey: ' . $e->getMessage()
+                'error' => 'Error analyzing journey: ' . $errorMessage
             ], 500);
         }
     }

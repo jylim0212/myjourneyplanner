@@ -136,8 +136,15 @@ class GptService
             // Log the raw response for debugging
             Log::debug('GPT API Raw Response', [
                 'status' => $response->status(),
-                'body' => $response->body()
+                'body' => mb_convert_encoding($response->body(), 'UTF-8', 'UTF-8')
             ]);
+
+            // Ensure proper encoding for file logging
+            file_put_contents(
+                storage_path('logs/gpt_debug.log'),
+                date('Y-m-d H:i:s') . ' Response: ' . mb_convert_encoding($response->body(), 'UTF-8', 'UTF-8') . "\n",
+                FILE_APPEND
+            );
 
             if (!$response->successful()) {
                 Log::error('GPT API request failed', [
