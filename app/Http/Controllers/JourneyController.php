@@ -35,32 +35,26 @@ class JourneyController extends Controller
             $weatherWarnings = [];
 
             foreach ($journey->locations as $location) {
-                $forecast = $this->weatherService->getWeatherForecast(
-                    $location->location,
-                    $journey->start_date,
-                    $journey->end_date
-                );
+                // Retrieve forecasts from DB within journey's date range
+                $forecasts = \App\Models\WeatherForecast::where('journey_id', $journey->id)
+                    ->where('location', $location->location)
+                    ->whereBetween('forecast_date', [$journey->start_date, $journey->end_date])
+                    ->orderBy('forecast_date')
+                    ->get();
 
-                if ($forecast) {
-                    foreach ($forecast as $date => $data) {
-                        // Check for severe weather conditions
-                        if (isset($data['weather_id'])) {
-                            // Weather condition codes:
-                            // 2xx: Thunderstorm
-                            // 5xx: Rain
-                            // 6xx: Snow
-                            // 7xx: Atmosphere (fog, dust, etc.)
-                            // 8xx: Clear/Clouds
-                            $weatherId = $data['weather_id'];
-                            if ($weatherId < 800) { // Any severe weather
-                                $isSafe = false;
-                                $weatherWarnings[] = $data['description'] . ' at ' . $location->location . ' on ' . $date;
-                            }
+                foreach ($forecasts as $forecast) {
+                    // Check for severe weather conditions
+                    if (isset($forecast->raw_data['weather_id'])) {
+                        $weatherId = $forecast->raw_data['weather_id'];
+                        if ($weatherId < 800) {
+                            $isSafe = false;
+                            $weatherWarnings[] = $forecast->description . ' at ' . $location->location . ' on ' . $forecast->forecast_date->format('Y-m-d');
                         }
                     }
                 }
+                $weatherData[$location->location] = $forecasts;
             }
-
+            $journey->weather_data = $weatherData;
             $journey->weather_safety = [
                 'is_safe' => $isSafe,
                 'warnings' => $weatherWarnings
@@ -105,6 +99,20 @@ class JourneyController extends Controller
                 'journey_id' => $journey->id,
                 'location' => $location,
             ]);
+        }
+
+        // Fetch and save weather forecasts for each location
+        foreach ($request->locations as $location) {
+            // Purge old forecasts for this journey/location outside the new date range
+            \App\Models\WeatherForecast::where('journey_id', $journey->id)
+                ->where('location', $location)
+                ->where(function ($query) use ($journey) {
+                    $query->where('forecast_date', '<', $journey->start_date)
+                          ->orWhere('forecast_date', '>', $journey->end_date);
+                })
+                ->delete();
+            // Fetch and save new forecasts for the current date range
+            $this->weatherService->getWeatherForecast($location, $journey->start_date, $journey->end_date, $journey);
         }
 
         return redirect()->route('journey.index')->with('success', 'Journey created successfully!');
@@ -157,6 +165,19 @@ class JourneyController extends Controller
 
             DB::commit();
 
+            // Fetch and save weather forecasts for each location
+            foreach ($request->locations as $location) {
+                // Delete ALL old forecasts for this journey/location
+                \App\Models\WeatherForecast::where('journey_id', $journey->id)
+                    ->where('location', $location)
+                    ->delete();
+                // Clear the weather cache for this location and date range
+                $cacheKey = "weather_{$location}_{$journey->start_date}_{$journey->end_date}";
+                \Illuminate\Support\Facades\Cache::forget($cacheKey);
+                // Fetch and save new forecasts for the full current date range
+                $this->weatherService->getWeatherForecast($location, $journey->start_date, $journey->end_date, $journey);
+            }
+
             return redirect()->route('journey.index')->with('success', 'Journey updated successfully!');
 
         } catch (\Exception $e) {
@@ -190,31 +211,23 @@ class JourneyController extends Controller
             // Always load locations
             $journey->load('locations');
             
-            // Always fetch weather data
+            // Always fetch weather data from database
             $weatherData = [];
             foreach ($journey->locations as $location) {
-                Log::info('Fetching weather data for location in show', [
-                    'location' => $location->location,
-                    'start_date' => $journey->start_date,
-                    'end_date' => $journey->end_date
-                ]);
-
-                $forecast = $this->weatherService->getWeatherForecast(
-                    $location->location,
-                    $journey->start_date,
-                    $journey->end_date
-                );
-
-                if ($forecast) {
-                    $weatherData[$location->location] = $forecast;
-                    Log::info('Weather data fetched successfully', [
-                        'location' => $location->location,
-                        'data' => $forecast
-                    ]);
-                } else {
-                    Log::warning('No weather data available for location', [
-                        'location' => $location->location
-                    ]);
+                $forecasts = \App\Models\WeatherForecast::where('journey_id', $journey->id)
+                    ->where('location', $location->location)
+                    ->orderBy('forecast_date')
+                    ->get();
+                if ($forecasts->count() > 0) {
+                    foreach ($forecasts as $forecast) {
+                        $weatherData[$location->location][$forecast->forecast_date->format('Y-m-d')] = [
+                            'temperature' => $forecast->temperature,
+                            'description' => $forecast->description,
+                            'icon' => $forecast->icon,
+                            'humidity' => $forecast->humidity,
+                            'wind_speed' => $forecast->wind_speed,
+                        ];
+                    }
                 }
             }
 
@@ -228,7 +241,7 @@ class JourneyController extends Controller
             ]);
             
             return redirect()->route('journey.index')
-                ->with('error', 'Failed to fetch weather data. Please try again later.');
+                ->with('error', 'No weather data available.');
         }
     }
 
@@ -247,13 +260,13 @@ class JourneyController extends Controller
             );
 
             if (!$weatherData) {
-                return response()->json(['error' => 'Failed to fetch weather data'], 500);
+                return response()->json(['error' => 'No weather data available.'], 404);
             }
 
             return response()->json($weatherData);
         } catch (\Exception $e) {
             Log::error('Weather data fetch error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch weather data'], 500);
+            return response()->json(['error' => 'No weather data available.'], 404);
         }
     }
 
@@ -273,32 +286,34 @@ class JourneyController extends Controller
                 ], 400);
             }
 
-            // Get weather data for each location
+            // Get weather data for each location from weather_forecasts table (not API)
             $weatherData = [];
             foreach ($journey->locations as $location) {
-                Log::info('Fetching weather data for location', [
+                $forecasts = \App\Models\WeatherForecast::where('journey_id', $journey->id)
+                    ->where('location', $location->location)
+                    ->whereBetween('forecast_date', [$journey->start_date, $journey->end_date])
+                    ->orderBy('forecast_date')
+                    ->get();
+                // Convert to associative array indexed by date
+                $weatherArray = [];
+                foreach ($forecasts as $forecast) {
+                    $weatherArray[$forecast->forecast_date->format('Y-m-d')] = [
+                        'description' => $forecast->description,
+                        'temperature' => $forecast->temperature,
+                        'humidity' => $forecast->humidity,
+                        'wind_speed' => $forecast->wind_speed,
+                    ];
+                }
+                $weatherData[$location->location] = $weatherArray;
+                Log::info('Weather forecast data from DB for GPT', [
                     'location' => $location->location,
-                    'start_date' => $journey->start_date,
-                    'end_date' => $journey->end_date
-                ]);
-
-                $weatherData[$location->location] = $this->weatherService->getWeatherForecast(
-                    $location->location,
-                    $journey->start_date,
-                    $journey->end_date
-                );
-
-                Log::info('Weather data received', [
-                    'location' => $location->location,
-                    'has_data' => !empty($weatherData[$location->location]),
-                    'data' => $weatherData[$location->location]
+                    'count' => count($weatherArray)
                 ]);
             }
 
             // Store weather data in journey for GPT analysis
             foreach ($journey->locations as $location) {
                 $location->weather_data = $weatherData[$location->location] ?? null;
-                
                 Log::info('Weather data assigned to location', [
                     'location' => $location->location,
                     'has_weather_data' => !empty($location->weather_data),

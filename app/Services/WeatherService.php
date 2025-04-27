@@ -4,6 +4,9 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use App\Models\WeatherApiSetting;
+
+use App\Models\WeatherForecast;
 
 class WeatherService
 {
@@ -12,11 +15,15 @@ class WeatherService
 
     public function __construct()
     {
-        $this->apiKey = config('services.openweather.api_key');
+        $this->apiKey = optional(WeatherApiSetting::first())->api_key;
         $this->baseUrl = config('services.openweather.base_url');
     }
 
-    public function getWeatherForecast($location, $startDate, $endDate)
+    // $journey is optional for saving forecasts
+    /**
+     * Fetch weather forecast for a location and date range, save to DB if journey provided
+     */
+    public function getWeatherForecast($location, $startDate, $endDate, $journey = null)
     {
         $cacheKey = "weather_{$location}_{$startDate}_{$endDate}";
         
@@ -69,7 +76,6 @@ class WeatherService
             // Group forecasts by date
             foreach ($weatherData['list'] as $item) {
                 $itemDate = strtotime(date('Y-m-d', $item['dt']));
-                
                 // Only include forecasts between start and end date
                 if ($itemDate >= $startTimestamp && $itemDate <= $endTimestamp) {
                     $date = date('Y-m-d', $itemDate);
@@ -80,7 +86,9 @@ class WeatherService
                             'icon' => $item['weather'][0]['icon'],
                             'humidity' => $item['main']['humidity'],
                             'wind_speed' => $item['wind']['speed'],
-                            'date' => $date
+                            'date' => $date,
+                            'weather_id' => $item['weather'][0]['id'] ?? null,
+                            'raw' => $item,
                         ];
                     }
                 }
@@ -96,6 +104,26 @@ class WeatherService
                 'forecast_count' => count($forecasts)
             ]);
 
+            // Save forecasts to DB
+            if (!empty($forecasts) && $journey) {
+                foreach ($forecasts as $date => $data) {
+                    WeatherForecast::updateOrCreate(
+                        [
+                            'journey_id' => $journey->id,
+                            'location' => $location,
+                            'forecast_date' => $date,
+                        ],
+                        [
+                            'description' => $data['description'] ?? null,
+                            'icon' => $data['icon'] ?? null,
+                            'temperature' => $data['temperature'] ?? null,
+                            'humidity' => $data['humidity'] ?? null,
+                            'wind_speed' => $data['wind_speed'] ?? null,
+                            'raw_data' => $data,
+                        ]
+                    );
+                }
+            }
             return $forecasts;
         } catch (\Exception $e) {
             \Log::error("Error getting weather forecast for {$location}: " . $e->getMessage());
@@ -143,8 +171,5 @@ class WeatherService
         }
     }
 
-    public function updateApiKey($apiKey)
-    {
-        config(['services.openweather.api_key' => $apiKey]);
-    }
+
 } 

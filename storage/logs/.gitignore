@@ -1,2 +1,3 @@
 *
 !.gitignore
+!gpt_debug.log

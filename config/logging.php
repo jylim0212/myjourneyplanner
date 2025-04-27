@@ -53,6 +53,11 @@ return [
             'channels' => ['single'],
             'ignore_exceptions' => false,
         ],
+        'gpt_debug' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/gpt_debug.log'),
+            'level' => 'debug',
+        ],
 
         'single' => [
             'driver' => 'single',

@@ -62,7 +62,7 @@ class GptService
     public function analyzeJourney($journey, $currentLocation, $customQuestion = null)
     {
         try {
-            Log::debug('Starting journey analysis', [
+            Log::channel('gpt_debug')->debug('Starting journey analysis', [
                 'journey_id' => $journey->id,
                 'journey_name' => $journey->journey_name,
                 'start_date' => $journey->start_date,
@@ -72,20 +72,20 @@ class GptService
 
             // Validate required journey data
             if (empty($journey->journey_name)) {
-                Log::error('Journey Analysis Error: Missing journey name', [
+                Log::channel('gpt_debug')->error('Journey Analysis Error: Missing journey name', [
                     'journey_id' => $journey->id
                 ]);
                 throw new \Exception('Journey name is required');
             }
 
             if (empty($journey->locations)) {
-                Log::error('Journey Analysis Error: No locations provided');
+                Log::channel('gpt_debug')->error('Journey Analysis Error: No locations provided');
                 throw new \Exception('At least one location is required for journey analysis');
             }
 
             // Get API configuration
             $config = $this->getApiConfig();
-            Log::debug('Retrieved API configuration', [
+            Log::channel('gpt_debug')->debug('Retrieved API configuration', [
                 'has_api_key' => !empty($config['api_key']),
                 'has_api_host' => !empty($config['api_host']),
                 'has_api_url' => !empty($config['api_url'])
@@ -96,14 +96,32 @@ class GptService
             }
 
             $prompt = $this->buildPrompt($journey, $currentLocation, $customQuestion);
-            Log::debug('Built prompt for journey analysis', [
+            Log::channel('gpt_debug')->debug('Built prompt for journey analysis', [
                 'prompt_length' => strlen($prompt),
                 'has_weather_data' => strpos($prompt, 'Weather Forecast:') !== false,
                 'has_local_events' => strpos($prompt, 'Local Events:') !== false
             ]);
+
+            // Log the full API request payload for debugging
+            Log::channel('gpt_debug')->debug('GPT API Request Payload', [
+                'url' => $config['api_url'],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'X-RapidAPI-Key' => $config['api_key'],
+                    'X-RapidAPI-Host' => $config['api_host'],
+                ],
+                'body' => [
+                    'messages' => [
+                        [
+                            'role' => 'user',
+                            'content' => $prompt
+                        ]
+                    ]
+                ]
+            ]);
             
             // Log the request data (excluding sensitive info)
-            Log::info('Journey Analysis Request', [
+            Log::channel('gpt_debug')->info('Journey Analysis Request', [
                 'journey_id' => $journey->id,
                 'current_location' => $currentLocation,
                 'timestamp' => now(),
@@ -111,30 +129,42 @@ class GptService
             ]);
 
             // Make the API request using our configured HTTP client
-            Log::debug('Sending request to GPT API', ['timestamp' => now()]);
+            Log::channel('gpt_debug')->debug('Sending request to GPT API', ['timestamp' => now()]);
+            $payload = [
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ]
+            ];
+
+            $payload['web_access'] = false;
+
+            $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            Log::channel('gpt_debug')->debug('GPT API JSON Payload', [ 'json' => $jsonPayload ]);
+
+            // Ensure the endpoint is /gpt4o as per RapidAPI docs
+            $apiUrl = str_ends_with($config['api_url'], '/gpt4o') ? $config['api_url'] : rtrim($config['api_url'], '/').'/gpt4o';
+            Log::channel('gpt_debug')->debug('GPT API Endpoint', [ 'url' => $apiUrl ]);
+
             $response = $this->getHttpClient()
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'X-RapidAPI-Key' => $config['api_key'],
                     'X-RapidAPI-Host' => $config['api_host']
                 ])
-                ->post($config['api_url'], [
-                    'messages' => [
-                        [
-                            'role' => 'user',
-                            'content' => $prompt
-                        ]
-                    ]
-                ]);
+                ->withBody($jsonPayload, 'application/json')
+                ->post($apiUrl);
 
-            Log::debug('Received response from GPT API', [
+            Log::channel('gpt_debug')->debug('Received response from GPT API', [
                 'status_code' => $response->status(),
                 'response_length' => strlen($response->body()),
                 'timestamp' => now()
             ]);
 
             // Log the raw response for debugging
-            Log::debug('GPT API Raw Response', [
+            Log::channel('gpt_debug')->debug('GPT API Raw Response', [
                 'status' => $response->status(),
                 'body' => mb_convert_encoding($response->body(), 'UTF-8', 'UTF-8')
             ]);
@@ -147,7 +177,7 @@ class GptService
             );
 
             if (!$response->successful()) {
-                Log::error('GPT API request failed', [
+                Log::channel('gpt_debug')->error('GPT API request failed', [
                     'status_code' => $response->status(),
                     'error_message' => $response->body(),
                     'timestamp' => now()
@@ -156,7 +186,7 @@ class GptService
             }
 
             $data = $response->json();
-            Log::debug('Parsed JSON response', [
+            Log::channel('gpt_debug')->debug('Parsed JSON response', [
                 'has_result' => isset($data['result']),
                 'has_text' => isset($data['text']),
                 'has_bot' => isset($data['bot']),
@@ -175,14 +205,14 @@ class GptService
                 return $data['message'];
             }
 
-            Log::error('Invalid response format from RapidAPI', [
+            Log::channel('gpt_debug')->error('Invalid response format from RapidAPI', [
                 'available_keys' => array_keys($data),
                 'timestamp' => now()
             ]);
             throw new \Exception('Invalid response format from RapidAPI');
 
         } catch (\Exception $e) {
-            Log::error('Journey Analysis Error', [
+            Log::channel('gpt_debug')->error('Journey Analysis Error', [
                 'message' => $e->getMessage(),
                 'journey_id' => $journey->id,
                 'exception' => get_class($e),
@@ -198,6 +228,8 @@ class GptService
     {
         $prompt = "Journey Details:\n";
         $prompt .= "Title: " . $journey->journey_name . "\n";
+        $prompt .= "Description: " . ($journey->description ?? '-') . "\n";
+        $prompt .= "Created At: " . ($journey->created_at ? $journey->created_at->format('Y-m-d H:i:s') : '-') . "\n";
         $prompt .= "Start Date: " . $journey->start_date . "\n";
         $prompt .= "End Date: " . $journey->end_date . "\n";
         $prompt .= "Current Location: " . $currentLocation . "\n";
@@ -213,7 +245,7 @@ class GptService
             $prompt .= "\nLocation: " . $location->location;
             
             // Log weather data for debugging
-            Log::debug('Weather data for location', [
+            Log::channel('gpt_debug')->debug('Weather data for location', [
                 'location' => $location->location,
                 'has_weather_data' => !empty($location->weather_data),
                 'weather_data' => $location->weather_data ?? null
@@ -230,7 +262,7 @@ class GptService
                     $prompt .= ", Wind Speed: " . $data['wind_speed'] . " m/s";
                     
                     // Log each day's weather data
-                    Log::debug('Daily weather data', [
+                    Log::channel('gpt_debug')->debug('Daily weather data', [
                         'location' => $location->location,
                         'date' => $date,
                         'data' => $data
@@ -245,8 +277,9 @@ class GptService
             $prompt .= "\n";
         }
 
-        // Use custom question if provided, otherwise use default from settings
-        $question = $customQuestion ?: GptApiSetting::getDefaultQuestion();
+        // Always append the admin-set default question at the end (custom overrides default if present)
+        $defaultQuestion = GptApiSetting::getDefaultQuestion();
+        $question = $customQuestion ?: $defaultQuestion;
         $prompt .= "\nQuestion: " . $question;
 
         return $prompt;

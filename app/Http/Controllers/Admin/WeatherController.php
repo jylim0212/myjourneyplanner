@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\WeatherApiSetting;
+
 use App\Http\Controllers\Controller;
 use App\Services\WeatherService;
 use Illuminate\Http\Request;
@@ -28,9 +30,9 @@ class WeatherController extends Controller
                 'api_key' => 'required|string'
             ]);
 
-            // Update the API key in the config
-            $this->weatherService->updateApiKey($request->api_key);
+            WeatherApiSetting::updateOrCreate([], ['api_key' => $request->input('api_key')]);
 
+            return back()->with('success', 'Weather API key updated!');
             return redirect()->route('admin.weather.index')
                 ->with('success', 'Weather API configuration updated successfully.');
         } catch (\Exception $e) {

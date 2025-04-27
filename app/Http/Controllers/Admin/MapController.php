@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\MapApiSetting;
+
 use App\Http\Controllers\Controller;
 use App\Services\MapService;
 use Illuminate\Http\Request;
@@ -28,8 +30,7 @@ class MapController extends Controller
                 'api_key' => 'required|string'
             ]);
 
-            // Update the API key in the .env file
-            $this->mapService->updateApiKey($request->api_key);
+            MapApiSetting::updateOrCreate([], ['api_key' => $request->input('api_key')]);
 
             return redirect()->route('admin.map.index')
                 ->with('success', 'Google Maps API key updated successfully.');

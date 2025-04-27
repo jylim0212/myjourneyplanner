@@ -2,18 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\MapApiSetting;
+
 class MapService
 {
-    public function updateApiKey($apiKey)
+    public function getApiKey()
     {
-        // Update the .env file
-        $envFile = base_path('.env');
-        $envContent = file_get_contents($envFile);
-        $envContent = preg_replace(
-            '/GOOGLE_MAPS_API_KEY=.*/',
-            'GOOGLE_MAPS_API_KEY=' . $apiKey,
-            $envContent
-        );
-        file_put_contents($envFile, $envContent);
+        return optional(MapApiSetting::first())->api_key;
     }
-} 
+
+}

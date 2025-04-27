@@ -90,7 +90,7 @@
                                                 @elseif($journeyStart->isPast() && $journeyEnd->isFuture())
                                                     This journey is currently in progress. Weather forecast is only available for upcoming dates.
                                                 @elseif($journeyStart->isFuture())
-                                                    Weather forecast will be available 5 days before the journey starts.
+                                                    No weather data available.
                                                 @else
                                                     Unable to fetch weather data for this location. Please try again later.
                                                 @endif
