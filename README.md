@@ -1,4 +1,4 @@
-<h1>AI-Powered Journey Planning with Weather Analysis</h1>
+<img width="617" height="516" alt="image" src="https://github.com/user-attachments/assets/b7a62669-5e9b-4181-a255-e3f65effc50c" /><h1>AI-Powered Journey Planning with Weather Analysis</h1>
 
 <h2>Description</h2>
 This is a journey planning software which provide user-friendly journey plan management system 
@@ -14,36 +14,39 @@ journeys and give personalise AI itineraries suggestion.
 - <b>Php</b>
 - <b>Javascript</b>
 - <b>Wampserver</b>
+- <b>Google Maps API</b>
+- <b>OpenAI API</b>
+- <b>OpenWeather API</b>
 
 <h2>Program overview:</h2>
 
 <p align="center">
-Launch the utility: <br/>
-<img src="https://i.imgur.com/62TgaWL.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Starting page: <br/>
+<img src="https://i.imgur.com/RpOOOlt.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 <br />
 <br />
-Select the disk:  <br/>
-<img src="https://i.imgur.com/tcTyMUE.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Main User Page:  <br/>
+<img src="https://i.imgur.com/tOGxBuC.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 <br />
 <br />
-Enter the number of passes: <br/>
-<img src="https://i.imgur.com/nCIbXbg.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Create journey: <br/>
+<img src="https://i.imgur.com/b7CYjHS.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 <br />
 <br />
-Confirm your selection:  <br/>
-<img src="https://i.imgur.com/cdFHBiU.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Weather forecast overview:  <br/>
+<img src="https://i.imgur.com/B1uZzSs.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 <br />
 <br />
-Wait for process to complete (may take some time):  <br/>
-<img src="https://i.imgur.com/JL945Ga.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+AI suggestion overview:  <br/>
+<img src="https://i.imgur.com/tOcyinJ.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<img src="https://i.imgur.com/1ezWcwn.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 <br />
 <br />
-Sanitization complete:  <br/>
-<img src="https://i.imgur.com/K71yaM2.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+Admin page:  <br/>
+<img src="https://i.imgur.com/R0fBH8v.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 <br />
 <br />
-Observe the wiped disk:  <br/>
-<img src="https://i.imgur.com/AeZkvFQ.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
 </p>
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
