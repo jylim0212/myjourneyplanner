@@ -1,4 +1,4 @@
-<img width="617" height="516" alt="image" src="https://github.com/user-attachments/assets/b7a62669-5e9b-4181-a255-e3f65effc50c" /><h1>AI-Powered Journey Planning with Weather Analysis</h1>
+<h1>AI-Powered Journey Planning with Weather Analysis</h1>
 
 <h2>Description</h2>
 This is a journey planning software which provide user-friendly journey plan management system 
