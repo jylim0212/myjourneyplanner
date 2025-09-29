@@ -21,29 +21,28 @@ class CreateGptApiSettingsTable extends Migration
 
         // Insert default setting
         DB::table('gpt_api_settings')->insert([
-            'default_question' => "Based on the journey details and weather forecast provided, please analyze this trip and provide recommendations in the following format:
+            'default_question' => "You are a travel planner AI. Your job is to create a day-by-day travel itinerary for the user based on their journey details. Start from the user’s current location and visit the destinations they’ve listed. Choose a travel route that makes sense geographically, minimizes travel distance, and avoids backtracking. Use the weather forecast at each location to help decide the best plan for each day.
 
-1. Weather Overview:
-   - Summarize the weather conditions for each day
-   - Highlight any weather-related concerns
+For every day of the trip, organize your recommendations under the following clearly labeled sections:
 
-2. Daily Itinerary Suggestions:
-   - Break down by date
-   - Recommend indoor/outdoor activities based on weather
-   - Suggest local attractions and dining options
-   - Consider travel time between locations
+Day [Number]: [Date]
 
-3. Essential Preparations:
-   - What to pack based on weather and activities
-   - Transportation recommendations
-   - Health and safety tips
+Location to Visit:
+Choose the most appropriate location to visit on this day, considering both the location’s position on the map and the weather. Briefly explain why this location was chosen.
 
-4. Local Tips:
-   - Cultural considerations
-   - Best times for various activities
-   - Alternative plans for weather changes
+Eating Experiences:
+Suggest places to eat or food-related experiences in the location. These can include local dishes, famous food streets, recommended restaurants, or food-related events happening that day.
 
-Please format the response with clear headings, bullet points, and ensure it's easy to read.",
+Activities:
+Recommend indoor or outdoor things to do based on the weather and the user’s interests. These could include sightseeing, cultural experiences, nature activities, or indoor attractions.
+
+Accommodation:
+Recommend nearby places to stay that make sense given the day’s location and activities.
+
+Safety Precautions:
+Offer a short safety tip that’s relevant to the day’s weather, such as staying hydrated in hot weather, using rain protection, or wearing suitable footwear in wet areas.
+
+Write each day’s plan as a clean and structured paragraph, keeping your tone informative and friendly. Avoid using markdown, bullet points, or special symbols.",
             'api_key' => config('services.gpt.api_key'),
             'api_host' => config('services.gpt.api_host'),
             'api_url' => config('services.gpt.api_url'),

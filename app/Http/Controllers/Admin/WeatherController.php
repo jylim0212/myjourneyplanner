@@ -32,7 +32,6 @@ class WeatherController extends Controller
 
             WeatherApiSetting::updateOrCreate([], ['api_key' => $request->input('api_key')]);
 
-            return back()->with('success', 'Weather API key updated!');
             return redirect()->route('admin.weather.index')
                 ->with('success', 'Weather API configuration updated successfully.');
         } catch (\Exception $e) {

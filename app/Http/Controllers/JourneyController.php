@@ -129,6 +129,15 @@ class JourneyController extends Controller
     // Update the journey details
     public function update(Request $request, $id)  // Use explicit $id instead of Journey model binding
     {
+        \Log::info('Update method called', [
+            'method' => $request->method(),
+            'all_data' => $request->all(),
+            'is_method_put' => $request->isMethod('put'),
+            'is_method_post' => $request->isMethod('post'),
+            'has_method_field' => $request->has('_method'),
+            'method_field_value' => $request->input('_method')
+        ]);
+
         $request->validate([
             'journey_name' => 'required|string|max:255',
             'start_date' => 'required|date',

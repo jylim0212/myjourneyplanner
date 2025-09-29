@@ -85,6 +85,16 @@ let autocomplete;
 let selectedLocations = @json($journey->locations->pluck('location'));
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Add form submission handler
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        console.log('Form submitted', {
+            method: form.method,
+            action: form.action,
+            methodField: form.querySelector('input[name="_method"]')?.value
+        });
+    });
+
     // Initialize the map centered on Malaysia
     map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: 3.140853, lng: 101.693207 }, // Kuala Lumpur coordinates

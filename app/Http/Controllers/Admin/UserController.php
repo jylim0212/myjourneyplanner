@@ -17,8 +17,7 @@ class UserController extends Controller
     public function toggleStatus(User $user)
     {
         if ($user->id === auth()->id()) {
-            return redirect()->route('admin.users')
-                ->with('error', 'You cannot deactivate your own account.');
+            abort(403, 'You cannot deactivate your own account.');
         }
 
         $user->is_active = !$user->is_active;
@@ -32,8 +31,7 @@ class UserController extends Controller
     public function deleteUser(User $user)
     {
         if ($user->id === auth()->id()) {
-            return redirect()->route('admin.users')
-                ->with('error', 'You cannot delete your own account.');
+            abort(403, 'You cannot delete your own account.');
         }
 
         if ($user->is_active) {

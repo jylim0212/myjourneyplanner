@@ -10,8 +10,12 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check() || !Auth::user()->isAdmin()) {
-            return redirect()->route('journey.index')->with('error', 'Unauthorized access.');
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Unauthorized access.');
         }
 
         return $next($request);
