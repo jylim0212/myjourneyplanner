@@ -1,3 +1,54 @@
+<h1>AI-Powered Journey Planning with Weather Analysis</h1>
+
+<h2>Description</h2>
+This is a journey planning software which provide user-friendly journey plan management system 
+and integrate weather forecast analysis, Artificial Intelligence (AI) to help user plan their 
+journeys and give personalise AI itineraries suggestion.
+
+<br />
+
+
+<h2>Languages and Utilities Used</h2>
+
+- <b>Laravel</b> 
+- <b>Php</b>
+- <b>Javascript</b>
+- <b>Wampserver</b>
+- <b>Google Maps API</b>
+- <b>OpenAI API</b>
+- <b>OpenWeather API</b>
+
+<h2>Program overview:</h2>
+
+<p align="center">
+Starting page: <br/>
+<img src="https://i.imgur.com/RpOOOlt.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<br />
+Main User Page:  <br/>
+<img src="https://i.imgur.com/tOGxBuC.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<br />
+Create journey: <br/>
+<img src="https://i.imgur.com/b7CYjHS.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<br />
+Weather forecast overview:  <br/>
+<img src="https://i.imgur.com/B1uZzSs.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<br />
+AI suggestion overview:  <br/>
+<img src="https://i.imgur.com/tOcyinJ.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<img src="https://i.imgur.com/1ezWcwn.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<br />
+Admin page:  <br/>
+<img src="https://i.imgur.com/R0fBH8v.jpeg" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<br />
+<br />
+</p>
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
 
 <p align="center">
@@ -62,3 +113,13 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+<!--
+ ```diff
+- text in red
++ text in green
+! text in orange
+# text in gray
+@@ text in purple (and bold)@@
+```
+--!>
